@@ -276,7 +276,7 @@ Now turning to SOC side angle , like how would you detect this or prevent or han
 - If some binary is being run which makes system level changes or  privesc and followed accessing restricted directories or unusual activity ? Flag it . Could be compromise
 - See if a root account or some account is accessed from a shell , check the process tree and if the shell of a another user is spawned as child process , then it credentials compromise or privilege escalation 
 
-## Containment
+### Containment
 - Block the attacking IPs at the firewall level.
 - Isolate the affected machine so that it couldn't talk to others.
 - See if the same patterns are observed across the network or unusual activity across network to confirm lateral movement.
