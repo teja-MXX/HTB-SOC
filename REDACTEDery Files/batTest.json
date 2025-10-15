@@ -1,0 +1,57 @@
+{
+    "users": [
+        {
+            "username": "admin@imagery.htb",
+            "password": "5d9c1d507a3f76af1e5c97a3ad1eaa31",
+            "isAdmin": true,
+            "displayId": "a1b2c3d4",
+            "login_attempts": 0,
+            "isTestuser": false,
+            "failed_login_attempts": 0,
+            "locked_until": null
+        },
+        {
+            "username": "testuser@imagery.htb",
+            "password": "2c65c8d7bfbca32a3ed42596192384f6",
+            "isAdmin": false,
+            "displayId": "e5f6g7h8",
+            "login_attempts": 0,
+            "isTestuser": true,
+            "failed_login_attempts": 0,
+            "locked_until": null
+        }
+    ],
+    "images": [
+        {
+            "id": "6ed3b6c0-826d-4894-a3b4-d2b6c693652a",
+            "filename": "090900f6-46af-44ff-85a9-a1f7c1cfa0fe_testBat.jpg",
+            "url": "/uploads/090900f6-46af-44ff-85a9-a1f7c1cfa0fe_testBat.jpg",
+            "title": "Battest",
+            "description": "",
+            "timestamp": "2025-10-03T07:03:11.085112",
+            "uploadedBy": "testuser@imagery.htb",
+            "uploadedByDisplayId": "e5f6g7h8",
+            "group": "My Images",
+            "type": "original",
+            "actual_mimetype": "image/jpeg"
+        }
+    ],
+    "image_collections": [
+        {
+            "name": "My Images"
+        },
+        {
+            "name": "Unsorted"
+        },
+        {
+            "name": "Converted"
+        },
+        {
+            "name": "Transformed"
+        },
+        {
+            "name": "Haha"
+        }
+    ],
+    "bug_reports": []
+}

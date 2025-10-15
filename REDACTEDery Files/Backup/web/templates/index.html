@@ -1,0 +1,2867 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Image Gallery</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/dompurify@2.3.6/dist/purify.min.js"></script>
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            display: flex;
+            flex-direction: column;
+            min-height: 100vh;
+        }
+        nav {
+            position: fixed;
+            top: 0;
+            width: 100%;
+            z-index: 50;
+        }
+        #app-content {
+            flex-grow: 1;
+            margin-top: 64px;
+        }
+        .animate-fade-in-down {
+            animation: fadeInDown 1s ease-out forwards;
+            opacity: 0;
+            transform: translateY(-20px);
+        }
+        .animate-fade-in {
+            animation: fadeIn 1.5s ease-out forwards;
+            opacity: 0;
+        }
+        @keyframes fadeInDown {
+            from {
+                opacity: 0;
+                transform: translateY(-20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+            }
+            to {
+                opacity: 1;
+            }
+        }
+        .page-content {
+            display: none;
+            min-height: calc(100vh - 64px - 200px);
+        }
+        .hero-background {
+            background-size: cover;
+            background-position: center;
+        }
+        .image-card-menu-container {
+            position: relative;
+        }
+        .image-card-menu-button {
+            position: absolute;
+            top: 8px;
+            right: 8px;
+            background-color: rgba(0, 0, 0, 0.5);
+            color: white;
+            border-radius: 9999px;
+            width: 32px;
+            height: 32px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-size: 1.2rem;
+            cursor: pointer;
+            z-index: 10;
+            transition: background-color 0.2s;
+        }
+        .image-card-menu-button:hover {
+            background-color: rgba(0, 0, 0, 0.7);
+        }
+        .image-card-dropdown {
+            position: absolute;
+            top: 40px;
+            right: 8px;
+            background-color: white;
+            border-radius: 0.5rem;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+            z-index: 20;
+            min-width: 120px;
+            overflow: hidden;
+            display: none;
+        }
+        .image-card-dropdown.open {
+            display: block;
+        }
+        .image-card-dropdown button, .image-card-dropdown a {
+            display: block;
+            width: 100%;
+            padding: 10px 15px;
+            text-align: left;
+            font-size: 0.9rem;
+            color: #333;
+            transition: background-color 0.2s;
+            text-decoration: none;
+        }
+        .image-card-dropdown button:hover, .image-card-dropdown a:hover {
+            background-color: #f0f0f0;
+        }
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.6);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 10000;
+            opacity: 0;
+            visibility: hidden;
+            transition: opacity 0.3s ease-in-out, visibility 0.3s ease-in-out;
+        }
+        .modal-overlay.open {
+            opacity: 1;
+            visibility: visible;
+        }
+        .modal-content {
+            background-color: white;
+            padding: 2rem;
+            border-radius: 0.75rem;
+            box-shadow: 0 8px 20px rgba(0, 0, 0, 0.2);
+            max-width: 400px;
+            width: 90%;
+            text-align: center;
+            transform: translateY(-20px);
+            opacity: 0;
+            transition: transform 0.3s ease-out, opacity 0.3s ease-out;
+        }
+        #manage-groups-modal-content {
+            max-width: 600px;
+        }
+        #transform-visual-modal-content {
+            max-width: 80vw;
+            max-height: 90vh;
+            overflow-y: auto;
+        }
+        #conversion-modal-content {
+            max-width: 450px;
+        }
+        .modal-overlay.open .modal-content {
+            transform: translateY(0);
+            opacity: 1;
+        }
+        .modal-message {
+            font-size: 1.1rem;
+            color: #333;
+            margin-bottom: 1.5rem;
+        }
+        .modal-buttons {
+            display: flex;
+            justify-content: center;
+            gap: 1rem;
+        }
+        .modal-buttons button {
+            padding: 0.75rem 1.5rem;
+            border-radius: 0.5rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s ease-in-out;
+        }
+        .modal-buttons .confirm-btn {
+            background-color: #ef4444;
+            color: white;
+        }
+        .modal-buttons .confirm-btn:hover {
+            background-color: #dc2626;
+        }
+        .modal-buttons .cancel-btn {
+            background-color: #e5e7eb;
+            color: #374151;
+        }
+        .modal-buttons .cancel-btn:hover {
+            background-color: #d1d5db;
+        }
+        .accordion-header {
+            background-color: #f3f4f6;
+            padding: 1rem;
+            border-radius: 0.5rem;
+            margin-bottom: 0.5rem;
+            cursor: pointer;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-weight: 600;
+            color: #374151;
+            transition: background-color 0.2s ease;
+        }
+        .accordion-header:hover {
+            background-color: #e5e7eb;
+        }
+        .accordion-content {
+            display: none;
+            padding: 1rem;
+            background-color: #ffffff;
+            border-radius: 0.5rem;
+            margin-bottom: 1rem;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        }
+        .accordion-content.open {
+            display: block;
+        }
+        .accordion-arrow {
+            transition: transform 0.2s ease;
+        }
+        .accordion-header.open .accordion-arrow {
+            transform: rotate(90deg);
+        }
+        #transformCanvas {
+            border: 1px solid #ccc;
+            background-color: #f9f9f9;
+            max-width: 100%;
+            height: auto;
+            display: block;
+            margin: 0 auto;
+        }
+        select {
+            -webkit-appearance: none;
+            -moz-appearance: none;
+            appearance: none;
+            background-image: url('data:image/svg+xml;charset=US-ASCII,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%22292.4%22%22%20height%3D%22292.4%22%20viewBox%3D%220%200%20292.4%20292.4%22%3E%3Cpath%20fill%3D%22%236B7280%22%20d%3D%22M287%20197.3L159.9%2069.2c-3.7-3.7-9.7-3.7-13.4%200L5.4%20197.3c-3.7%203.7-3.7%209.7%200%2013.4l13.4%2013.4c3.9%203.9%2010.1%203.9%2014%200l110.6-110.6c3.7-3.7%209.7-3.7%2013.4%200l110.6%20110.6c3.9%203.9%2010.1%203.9%2014%200l13.4-13.4c3.7-3.7%203.7-9.7%200-13.4z%22%2F%3E%3C%2Fsvg%3E');
+            background-repeat: no-repeat;
+            background-position: right 0.7em top 50%, 0 0;
+            background-size: 0.65em auto, 100%;
+            padding-right: 2.5em;
+        }
+        select::-ms-expand {
+            display: none;
+        }
+        .disabled-feature-btn {
+            opacity: 0.6;
+            cursor: not-allowed;
+            background-color: #e2e8f0;
+            color: #64748b;
+        }
+        .disabled-feature-btn:hover {
+            background-color: #e2e8f0;
+            color: #64748b;
+        }
+        .canvas-filter-saturation { filter: saturate(var(--saturation-value, 1)); }
+        .canvas-filter-brightness { filter: brightness(var(--brightness-value, 1)); }
+        .canvas-filter-contrast { filter: contrast(var(--contrast-value, 1)); }
+        .canvas-filter-rotate { transform: rotate(var(--rotate-degrees, 0deg)); }
+    </style>
+</head>
+<body class="min-h-screen bg-gray-100 antialiased">
+
+    <nav class="bg-gray-800 p-4 shadow-lg rounded-b-lg">
+        <div class="container mx-auto flex flex-wrap justify-between items-center">
+            <div class="text-white text-3xl font-bold rounded-md px-3 py-2 flex items-center">
+                Imagery<span class="text-sm align-top">™</span>
+            </div>
+            <div class="flex flex-wrap space-x-4" id="navbar-links">
+                <button id="nav-home" class="nav-link px-4 py-2 rounded-md font-medium transition duration-300 ease-in-out transform hover:scale-105 text-gray-300 hover:bg-gray-700 hover:text-white" data-page="home" style="display: none;">Home</button>
+                <button id="nav-gallery" class="nav-link px-4 py-2 rounded-md font-medium transition duration-300 ease-in-out transform hover:scale-105 text-gray-300 hover:bg-gray-700 hover:text-white" data-page="gallery" style="display: none;">Gallery</button>
+                <button id="nav-upload" class="nav-link px-4 py-2 rounded-md font-medium transition duration-300 ease-in-out transform hover:scale-105 text-gray-300 hover:bg-gray-700 hover:text-white" data-page="upload" style="display: none;">Upload</button>
+                <button id="nav-admin-panel" class="nav-link px-4 py-2 rounded-md font-medium transition duration-300 ease-in-out transform hover:scale-105 text-gray-300 hover:bg-gray-700 hover:text-white" data-page="adminPanel" style="display: none;">Admin Panel</button>
+                <button id="nav-login" class="nav-link px-4 py-2 rounded-md font-medium transition duration-300 ease-in-out transform hover:scale-105 text-gray-300 hover:bg-gray-700 hover:text-white" data-page="login" style="display: none;">Login</button>
+                <button id="nav-register" class="nav-link px-4 py-2 rounded-md font-medium transition duration-300 ease-in-out transform hover:scale-105 text-gray-300 hover:bg-gray-700 hover:text-white" data-page="register" style="display: none;">Register</button>
+                <button id="nav-logout" class="bg-red-600 hover:bg-red-700 text-white font-semibold py-2 px-4 rounded-md shadow-md transition duration-300 ease-in-out transform hover:scale-105" style="display: none;">Logout</button>
+            </div>
+        </div>
+    </nav>
+
+    <div id="message-box" class="fixed top-20 left-1/2 -translate-x-1/2 px-6 py-3 rounded-lg shadow-lg text-center z-[99999] transition-opacity duration-300 ease-in-out opacity-0 font-semibold text-lg" style="display: none; min-width: 250px;"></div>
+
+    <div id="app-content">
+        <div id="homePage" class="page-content flex flex-col items-center justify-start bg-gradient-to-br from-blue-100 to-purple-100">
+            <section class="w-full py-20 md:py-32 text-white text-center shadow-inner bg-gradient-to-br from-blue-600 to-indigo-700">
+                <div class="container mx-auto px-4">
+                    <h1 class="text-5xl md:text-6xl font-extrabold mb-6 animate-fade-in-down drop-shadow-lg">Capture & Cherish Every Moment</h1>
+                    <p class="text-xl md:text-2xl mb-10 leading-relaxed animate-fade-in drop-shadow-md">
+                        Your personal online gallery, designed for simplicity and beauty.
+                        Upload, organize, and relive your memories with ease.
+                    </p>
+                </div>
+            </section>
+
+            <section class="w-full py-16 bg-white shadow-lg">
+                <div class="container mx-auto px-4 text-center">
+                    <h2 class="text-4xl font-extrabold text-gray-900 mb-12">Powerful Features at Your Fingertips</h2>
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
+                        <div class="p-6 bg-gray-50 rounded-xl shadow-md transform transition duration-300 hover:scale-105 hover:shadow-xl">
+                            <span class="text-5xl mb-4 block">🖼</span>
+                            <h3 class="text-2xl font-bold text-gray-800 mb-3">Seamless Uploads</h3>
+                            <p class="text-gray-700">Upload images directly from your device or via a web link. Quick and easy!</p>
+                        </div>
+                        <div class="p-6 bg-gray-50 rounded-xl shadow-md transform transition duration-300 hover:scale-105 hover:shadow-xl">
+                            <span class="text-5xl mb-4 block">🔒</span>
+                            <h3 class="text-2xl font-bold text-gray-800 mb-3">Personalized Gallery</h3>
+                            <p class="text-gray-700">Your private collection, accessible only to you after logging in.</p>
+                        </div>
+                        <div class="p-6 bg-gray-50 rounded-xl shadow-md transform transition duration-300 hover:scale-105 hover:shadow-xl">
+                            <span class="text-5xl mb-4 block">🚀</span>
+                            <h3 class="text-2xl font-bold text-gray-800 mb-3">Blazing Fast</h3>
+                            <p class="text-gray-700">Optimized for speed, ensuring your gallery loads instantly.</p>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <section class="w-full py-16 bg-gradient-to-br from-teal-50 to-green-50">
+                <div class="container mx-auto px-4 text-center">
+                    <h2 class="text-4xl font-extrabold text-gray-900 mb-12">Why Join Our Community?</h2>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-8 text-left">
+                        <div class="bg-white p-6 rounded-xl shadow-md">
+                            <h3 class="text-2xl font-bold text-gray-800 mb-3 flex items-center"><span class="text-green-500 mr-3 text-3xl">✅</span>Simplicity & Ease</h3>
+                            <p class="text-gray-700">Our intuitive interface makes managing your photos a breeze. No complex menus, just pure enjoyment.</p>
+                        </div>
+                        <div class="bg-white p-6 rounded-xl shadow-md">
+                            <h3 class="text-2xl font-bold text-gray-800 mb-3 flex items-center"><span class="text-green-500 mr-3 text-3xl">✅</span>Your Memories, Your Way</h3>
+                            <p class="text-gray-700">Organize your images with custom titles and descriptions, creating a truly personal archive.</p>
+                        </div>
+                        <div class="bg-white p-6 rounded-xl shadow-md">
+                            <h3 class="text-2xl font-bold text-gray-800 mb-3 flex items-center"><span class="text-green-500 mr-3 text-3xl">✅</span>Always Accessible</h3>
+                            <p class="text-gray-700">Since your gallery is stored locally, your images are available even when you're offline.</p>
+                        </div>
+                        <div class="bg-white p-6 rounded-xl shadow-md">
+                            <h3 class="text-2xl font-bold text-gray-800 mb-3 flex items-center"><span class="text-green-500 mr-3 text-3xl">✅</span>Lightweight & Efficient</h3>
+                            <p class="text-gray-700">Designed to be fast and not hog your device's resources, ensuring a smooth experience.</p>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <section class="w-full py-16 bg-gray-100">
+                <div class="container mx-auto px-4 text-center">
+                    <h2 class="text-4xl font-extrabold text-gray-900 mb-12">What Our Users Say</h2>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+                        <div class="bg-white p-6 rounded-xl shadow-md border-t-4 border-blue-500">
+                            <p class="text-lg text-gray-700 italic mb-4">"Finally, a simple and elegant way to keep my photos organized. The local upload feature is a game-changer!"</p>
+                            <p class="font-semibold text-gray-800">- Jane Doe, Photographer</p>
+                        </div>
+                        <div class="bg-white p-6 rounded-xl shadow-md border-t-4 border-purple-500">
+                            <p class="text-lg text-gray-700 italic mb-4">"I love how easy it is to use. No complicated setup, just upload and view. Perfect for my personal collection."</p>
+                            <p class="font-semibold text-gray-800">- John Smith, Hobbyist</p>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <section class="w-full py-16 bg-gradient-to-br from-blue-600 to-indigo-700 text-white text-center">
+                <div class="container mx-auto px-4">
+                    <h2 class="text-4xl font-extrabold mb-6">Ready to Start Your Gallery?</h2>
+                    <p class="text-xl leading-relaxed mb-8">
+                        Join hundreds of users who are already enjoying their personalized image collections.
+                        It's quick, easy, and free!
+                    </p>
+                </div>
+            </section>
+        </div>
+
+        <div id="registerPage" class="page-content flex flex-col items-center justify-center bg-gradient-to-br from-blue-600 to-indigo-700 p-4">
+            <div class="bg-white p-8 rounded-xl shadow-2xl max-w-md w-full">
+                <h1 class="text-4xl font-extrabold text-gray-900 mb-6 text-center">Register</h1>
+                <form id="registerForm" class="space-y-6">
+                    <div>
+                        <label class="block text-gray-700 text-sm font-bold mb-2" for="registerEmail">
+                            Email ID
+                        </label>
+                        <input
+                            type="email"
+                            id="registerEmail"
+                            class="shadow appearance-none border rounded-lg w-full py-3 px-4 text-gray-700 leading-tight focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition duration-200"
+                            placeholder="Enter your email ID"
+                            required
+                        />
+                        <p id="registerEmailWarning" class="text-xs text-red-500 mt-1" style="display: none;">Please provide a valid email ID.</p>
+                    </div>
+                    <div>
+                        <label class="block text-gray-700 text-sm font-bold mb-2" for="registerPassword">
+                            Password
+                        </label>
+                        <div class="relative">
+                            <input
+                                type="password"
+                                id="registerPassword"
+                                class="shadow appearance-none border rounded-lg w-full py-3 px-4 text-gray-700 mb-3 leading-tight focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition duration-200 pr-10"
+                                placeholder="Enter your password"
+                                required
+                            />
+                            <span class="absolute inset-y-0 right-0 pr-3 flex items-center text-sm leading-5 cursor-pointer" onclick="togglePasswordVisibility('registerPassword')">
+                                <svg class="h-5 w-5 text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path id="registerPasswordEyeOpen" style="display:none;" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z M12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6Z"></path>
+                                    <path id="registerPasswordEyeClosed" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-10-7-10-7a1.84 1.84 0 0 1 0-1.06M4.22 4.22 2 6.46l2.06 2.06M9.91 4.24A10.07 10.07 0 0 1 12 4c7 0 10 7 10 7a1.84 1.84 0 0 1-.07 1.06M15 12a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z M16.03 16.03 22 22 17.94 17.94Z"></path>
+                                </svg>
+                            </span>
+                        </div>
+                    </div>
+                    <button
+                        type="submit"
+                        class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-4 rounded-lg shadow-lg transition duration-300 ease-in-out transform hover:scale-105"
+                    >
+                        Register
+                    </button>
+                </form>
+            </div>
+        </div>
+
+        <div id="loginPage" class="page-content flex flex-col items-center justify-center bg-gradient-to-br from-blue-600 to-indigo-700 p-4">
+            <div class="bg-white p-8 rounded-xl shadow-2xl max-w-md w-full">
+                <h1 class="text-4xl font-extrabold text-gray-900 mb-6 text-center">Login</h1>
+                <form id="loginForm" class="space-y-6">
+                    <div>
+                        <label class="block text-gray-700 text-sm font-bold mb-2" for="loginEmail">
+                            Email ID
+                        </label>
+                        <input
+                            type="email"
+                            id="loginEmail"
+                            class="shadow appearance-none border rounded-lg w-full py-3 px-4 text-gray-700 leading-tight focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition duration-200"
+                            placeholder="Enter your email ID"
+                            required
+                        />
+                        <p id="loginEmailWarning" class="text-xs text-red-500 mt-1" style="display: none;">Please provide a valid email ID.</p>
+                    </div>
+                    <div>
+                        <label class="block text-gray-700 text-sm font-bold mb-2" for="loginPassword">
+                            Password
+                        </label>
+                        <div class="relative">
+                            <input
+                                type="password"
+                                id="loginPassword"
+                                class="shadow appearance-none border rounded-lg w-full py-3 px-4 text-gray-700 mb-3 leading-tight focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition duration-200 pr-10"
+                                placeholder="Enter your password"
+                                required
+                            />
+                            <span class="absolute inset-y-0 right-0 pr-3 flex items-center text-sm leading-5 cursor-pointer" onclick="togglePasswordVisibility('loginPassword')">
+                                <svg class="h-5 w-5 text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path id="loginPasswordEyeOpen" style="display:none;" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z M12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6Z"></path>
+                                    <path id="loginPasswordEyeClosed" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-10-7-10-7a1.84 1.84 0 0 1 0-1.06M4.22 4.22 2 6.46l2.06 2.06M9.91 4.24A10.07 10.07 0 0 1 12 4c7 0 10 7 10 7a1.84 1.84 0 0 1-.07 1.06M15 12a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z M16.03 16.03 22 22 17.94 17.94Z"></path>
+                                </svg>
+                            </span>
+                        </div>
+                    </div>
+                    <button
+                        type="submit"
+                        class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-4 rounded-lg shadow-lg transition duration-300 ease-in-out transform hover:scale-105"
+                    >
+                        Login
+                    </button>
+                </form>
+                <p class="mt-6 text-center text-gray-600">
+                    Don't have an account?
+                    <button onclick="navigateTo('register')" class="text-blue-600 hover:text-blue-800 font-semibold transition duration-200">
+                        Register here
+                    </button>
+                </p>
+            </div>
+        </div>
+
+        <div id="galleryPage" class="page-content min-h-screen bg-gray-50 p-4">
+            <div class="container mx-auto py-8">
+                <h1 class="text-4xl font-extrabold text-gray-900 mb-8 text-center">Your Image Gallery</h1>
+                <div id="gallery-controls" class="flex justify-start pl-4 mb-6">
+                    <button id="manageGroupsBtnGallery" class="bg-purple-600 hover:bg-purple-700 text-white font-bold py-2 px-4 rounded-lg shadow-md transition duration-200" style="display: none;">
+                        Manage Groups
+                    </button>
+                </div>
+                <div id="gallery-loading" class="text-center text-xl text-gray-700 py-8" style="display: none;">Loading gallery...</div>
+                <div id="gallery-not-logged-in" class="bg-white p-8 rounded-xl shadow-xl text-center" style="display: none;">
+                    <p class="text-2xl text-gray-700 font-semibold">Please log in to view the gallery.</p>
+                </div>
+                <div id="gallery-empty" class="text-center text-gray-600 text-lg p-8 bg-white rounded-xl shadow-md" style="display: none;">
+                    No images uploaded yet. Go to the "Upload" page to add some!
+                </div>
+                <div id="grouped-image-display">
+                </div>
+            </div>
+        </div>
+
+        <div id="uploadPage" class="page-content flex flex-col items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100 p-4">
+            <div class="bg-white p-8 rounded-xl shadow-2xl max-w-lg w-full">
+                <h1 class="text-4xl font-extrabold text-gray-900 mb-6 text-center">Upload New Image</h1>
+
+                <div class="flex justify-center space-x-4 mb-6">
+                    <button id="upload-mode-file-btn" class="px-6 py-3 rounded-full font-semibold transition duration-300 ease-in-out transform hover:scale-105 bg-blue-600 text-white shadow-md">
+                        Upload Local File
+                    </button>
+                    <button id="upload-mode-url-btn" class="px-6 py-3 rounded-full font-semibold transition duration-300 ease-in-out transform hover:scale-105 text-gray-700 bg-gray-200 hover:bg-gray-300">
+                        Upload via Link
+                    </button>
+                </div>
+
+                <form id="uploadForm" class="space-y-6">
+                    <div id="file-upload-section">
+                        <label class="block text-gray-700 text-sm font-bold mb-2" for="localImageFile">
+                            Select Image File (Max 1MB, JPG/PNG/GIF/BMP/TIFF only)
+                        </label>
+                        <input
+                            type="file"
+                            id="localImageFile"
+                            accept="image/jpeg, image/png, image/gif, image/bmp, image/tiff"
+                            class="block w-full text-sm text-gray-900 border border-gray-300 rounded-lg cursor-pointer bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500 py-2 px-3"
+                            required
+                        />
+                        <p class="text-xs text-gray-500 mt-1">
+                            (Only JPG, PNG, GIF, BMP, TIFF image files up to 1MB are supported.)
+                        </p>
+                    </div>
+
+                    <div id="url-upload-section" style="display: none;">
+                        <label class="block text-gray-700 text-sm font-bold mb-2" for="imageUrl">
+                            Image URL
+                        </label>
+                        <input
+                            type="url"
+                            id="uploadImageUrl"
+                            class="shadow appearance-none border rounded-lg w-full py-3 px-4 text-gray-700 leading-tight focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition duration-200"
+                            placeholder="e.g., https://example.com/my-image.jpg"
+                        />
+                        <p class="text-xs text-gray-500 mt-1">
+                            (Provide a direct link to an image file. Will be fetched and validated.)
+                            </p>
+                    </div>
+
+                    <div>
+                        <label class="block text-gray-700 text-sm font-bold mb-2" for="imageTitle">
+                            Title (Optional)
+                        </label>
+                        <input
+                            type="text"
+                            id="imageTitle"
+                            class="shadow appearance-none border rounded-lg w-full py-3 px-4 text-gray-700 leading-tight focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition duration-200"
+                            placeholder="A short title for your image (defaults to filename/URL)"
+                        />
+                    </div>
+                    <div>
+                        <label class="block text-gray-700 text-sm font-bold mb-2" for="imageDescription">
+                            Description (Optional)
+                        </label>
+                        <textarea
+                            id="imageDescription"
+                            rows="3"
+                            class="shadow appearance-none border rounded-lg w-full py-3 px-4 text-gray-700 leading-tight focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition duration-200"
+                            placeholder="A brief description of your image"
+                        ></textarea>
+                    </div>
+                    <div id="group-selection-section">
+                        <label class="block text-gray-700 text-sm font-bold mb-2" for="imageGroup"> Group (Optional) </label>
+                        <select id="imageGroup" class="shadow appearance-none border rounded-lg w-full py-3 px-4 text-gray-700 leading-tight focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition duration-200">
+                            <option value="My Images">My Images</option>
+                            <option value="Unsorted">Unsorted</option>
+                        </select>
+                        <button type="button" id="addNewGroupBtn" class="mt-2 text-blue-600 hover:text-blue-800 text-sm font-semibold"> + Add New Group </button>
+                        <input type="text" id="newGroupNameInput" class="hidden shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition duration-200 mt-2" placeholder="Enter new group name" />
+                        <button type="button" id="saveNewGroupBtn" class="hidden mt-2 bg-green-500 hover:bg-green-600 text-white font-bold py-2 px-4 rounded-lg shadow-md transition duration-200 text-sm">Save Group</button>
+                    </div>
+                    <button
+                        type="submit"
+                        class="w-full bg-green-600 hover:bg-green-700 text-white font-bold py-3 px-4 rounded-lg shadow-lg transition duration-300 ease-in-out transform hover:scale-105"
+                    >
+                        Upload Image
+                    </button>
+                </form>
+                <p id="upload-user-info" class="mt-6 text-center text-sm text-gray-500" style="display: none;">
+                    Uploading as Account ID: <span class="font-mono text-gray-700 font-semibold"></span>
+                </p>
+            </div>
+        </div>
+
+        <div id="reportBugPage" class="page-content flex flex-col items-center justify-center bg-gradient-to-br from-purple-50 to-pink-100 p-4">
+            <div class="bg-white p-8 rounded-xl shadow-2xl max-w-lg w-full">
+                <h1 class="text-4xl font-extrabold text-gray-900 mb-6 text-center">Report a Bug</h1>
+                <p class="text-gray-600 mb-6 text-center">
+                    Found an issue? Please provide details below.
+                </p>
+                <form id="bugReportForm" class="space-y-6">
+                    <div>
+                        <label class="block text-gray-700 text-sm font-bold mb-2" for="bugName">
+                            Bug Name / Summary
+                        </label>
+                        <input
+                            type="text"
+                            id="bugName"
+                            class="shadow appearance-none border rounded-lg w-full py-3 px-4 text-gray-700 leading-tight focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent transition duration-200"
+                            placeholder="e.g., Image upload fails."
+                            required
+                        />
+                    </div>
+                    <div>
+                        <label class="block text-gray-700 text-sm font-bold mb-2" for="bugDetails">
+                            Bug Details
+                        </label>
+                        <textarea
+                            id="bugDetails"
+                            rows="8"
+                            class="shadow appearance-none border rounded-lg w-full py-3 px-4 text-gray-700 leading-tight focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent transition duration-200"
+                            placeholder="Describe the bug here. Be as detailed as possible, including steps to reproduce."
+                            required
+                        ></textarea>
+                    </div>
+                    <button
+                        type="submit"
+                        class="w-full bg-purple-600 hover:bg-purple-700 text-white font-bold py-3 px-4 rounded-lg shadow-lg transition duration-300 ease-in-out transform hover:scale-105"
+                    >
+                        Submit Bug Report
+                    </button>
+                </form>
+            </div>
+        </div>
+
+        <div id="adminPanelPage" class="page-content min-h-screen bg-gray-50 p-4">
+            <div class="container mx-auto py-8">
+                <h1 class="text-4xl font-extrabold text-gray-900 mb-8 text-center">Admin Panel</h1>
+                <div id="admin-not-logged-in" class="bg-white p-8 rounded-xl shadow-xl text-center" style="display: none;">
+                    <p class="text-2xl text-red-700 font-semibold">Access Denied: You must be logged in as an administrator.</p>
+                </div>
+                <div id="no-admin-user-message" class="bg-yellow-100 border-l-4 border-yellow-500 text-yellow-700 p-4 rounded-md mb-6" role="alert" style="display: none;">
+                    <p class="font-bold">No Administrator Found!</p>
+                    <p>It looks like there are no administrator accounts registered yet. The first user to register will automatically become the administrator. Please register an account to gain admin access.</p>
+                </div>
+                <div id="admin-content-wrapper" style="display: none;">
+                    <div class="mb-12">
+                        <h2 class="text-3xl font-bold text-gray-800 mb-6 border-b-2 pb-2">User Management</h2>
+                        <p id="no-users" class="text-gray-600 text-lg p-4 bg-white rounded-xl shadow-md" style="display: none;">No users registered yet (besides admin).</p>
+                        <div id="user-list" class="space-y-4">
+                        </div>
+                    </div>
+
+                    <div id="test-features-section" class="mb-12" style="display: none;">
+                        <h2 class="text-3xl font-bold text-gray-800 mb-6 border-b-2 pb-2">Advanced Features</h2>
+                        <div class="bg-blue-50 p-6 rounded-xl shadow-inner flex flex-wrap gap-4 items-center justify-center">
+                            <p class="text-blue-800 font-semibold">Build in Progress</p>
+                        </div>
+                    </div>
+
+                    <div>
+                        <h2 class="text-3xl font-bold text-gray-800 mb-6 border-b-2 pb-2">Submitted Bug Reports</h2>
+                        <p id="no-bug-reports" class="text-gray-600 text-lg p-4 bg-white rounded-xl shadow-md" style="display: none;">No bug reports submitted yet.</p>
+                        <div id="bug-reports-list" class="space-y-6">
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <div id="confirmation-modal-overlay" class="modal-overlay">
+        <div id="confirmation-modal-content" class="modal-content">
+            <p id="confirmation-modal-message" class="modal-message"></p>
+            <div id="confirmation-modal-buttons" class="modal-buttons">
+            </div>
+        </div>
+    </div>
+
+    <div id="conversion-modal-overlay" class="modal-overlay">
+        <div id="conversion-modal-content" class="modal-content">
+            <div id="convert-image-form">
+                <h2 class="text-2xl font-bold text-gray-800 mb-4">Convert Image</h2>
+                <p class="text-gray-600 mb-4">Select the desired output format:</p>
+                <input type="hidden" id="convertImageId">
+                <input type="hidden" id="originalImageMimeType">
+                <div class="mb-6">
+                    <label for="conversionFormat" class="block text-gray-700 text-sm font-bold mb-2 text-left">
+                        Output Format
+                    </label>
+                    <select id="conversionFormat" class="shadow border rounded-lg w-full py-3 px-4 text-gray-700 leading-tight focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition duration-200">
+                    </select>
+                </div>
+                <div class="modal-buttons">
+                    <button id="executeConversionBtn" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-lg shadow-md transition duration-200">
+                        Convert
+                    </button>
+                    <button id="cancelConversionBtn" class="bg-gray-200 hover:bg-gray-300 text-gray-700 font-bold py-2 px-4 rounded-lg shadow-md transition duration-200">
+                        Cancel
+                    </button>
+                </div>
+            </div>
+            <div id="conversion-result-section" class="text-center hidden">
+                <p class="text-xl font-semibold mb-4 text-green-700">Conversion Successful!</p>
+                <img id="converted-image-preview" src="" alt="Converted Image" class="max-w-full h-auto mx-auto my-4 rounded-lg shadow-md border border-gray-200"/>
+                <div class="flex flex-col items-center gap-4">
+                    <a id="download-converted-image-btn" href="#" download class="bg-green-600 hover:bg-green-700 text-white font-bold py-3 px-6 rounded-lg shadow-md transition duration-200 text-lg flex items-center justify-center gap-2">
+                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
+                        Download Converted Image
+                    </a>
+                    <button id="closeConvertedModalBtn" class="bg-gray-300 hover:bg-gray-400 text-gray-800 font-bold py-2 px-4 rounded-lg shadow-md transition duration-200">
+                        Close
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="edit-modal-overlay" class="modal-overlay">
+        <div id="edit-modal-content" class="modal-content max-w-md">
+            <h2 class="text-2xl font-bold text-gray-800 mb-4">Edit Image Details</h2>
+            <input type="hidden" id="editImageId">
+            <div class="mb-4 text-left">
+                <label for="editTitle" class="block text-gray-700 text-sm font-bold mb-2">Title</label>
+                <input type="text" id="editTitle" class="shadow appearance-none border rounded-lg w-full py-3 px-4 text-gray-700 leading-tight focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="Image Title">
+            </div>
+            <div class="mb-6 text-left">
+                <label for="editDescription" class="block text-gray-700 text-sm font-bold mb-2">Description</label>
+                <textarea id="editDescription" rows="3" class="shadow appearance-none border rounded-lg w-full py-3 px-4 text-gray-700 leading-tight focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="Image Description"></textarea>
+            </div>
+            <div class="mb-6 text-left">
+                <label for="editGroup" class="block text-gray-700 text-sm font-bold mb-2">Group</label>
+                <select id="editGroup" class="shadow border rounded-lg w-full py-3 px-4 text-gray-700 leading-tight focus:outline-none focus:ring-2 focus:ring-blue-500">
+                </select>
+            </div>
+            <div class="modal-buttons">
+                <button id="saveEditBtn" class="bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-4 rounded-lg shadow-md transition duration-200">
+                    Save Changes
+                </button>
+                <button id="cancelEditBtn" class="bg-gray-200 hover:bg-gray-300 text-gray-700 font-bold py-2 px-4 rounded-lg shadow-md transition duration-200">
+                    Cancel
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <div id="transform-visual-modal-overlay" class="modal-overlay">
+        <div id="transform-visual-modal-content" class="modal-content max-w-4xl w-full">
+            <div id="transform-controls-section">
+                <h2 class="text-2xl font-bold text-gray-800 mb-4 text-center">Visual Image Transformation</h2>
+                <input type="hidden" id="visualTransformImageId">
+                <input type="hidden" id="originalImageURL">
+
+                <div class="flex flex-col md:flex-row gap-6 mb-6">
+                    <div class="md:w-3/4 flex justify-center items-center bg-gray-100 rounded-lg p-4 shadow-inner">
+                        <canvas id="transformCanvas" class="max-w-full max-h-[60vh]"></canvas>
+                    </div>
+
+                    <div class="md:w-1/4 flex flex-col space-y-4">
+                        <div class="text-left">
+                            <label for="visualTransformOperation" class="block text-gray-700 text-sm font-bold mb-2">Operation</label>
+                            <select id="visualTransformOperation" class="shadow border rounded-lg w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:ring-2 focus:ring-blue-500">
+                                <option value="none">Select an operation</option>
+                                <option value="crop">Crop</option>
+                                <option value="rotate">Rotate</option>
+                                <option value="saturation">Saturation</option>
+                                <option value="brightness">Brightness</option>
+                                <option value="contrast">Contrast</option>
+                            </select>
+                        </div>
+
+                        <div id="visualCropParams" class="space-y-2" style="display: none;">
+                            <h3 class="text-lg font-semibold text-gray-800">Crop Area (px)</h3>
+                            <div>
+                                <label for="visualCropX" class="block text-gray-700 text-xs font-bold">X:</label>
+                                <input type="number" id="visualCropX" class="shadow border rounded-lg w-full py-1 px-2 text-gray-700 text-sm" value="0" min="0">
+                            </div>
+                            <div>
+                                <label for="visualCropY" class="block text-gray-700 text-xs font-bold">Y:</label>
+                                <input type="number" id="visualCropY" class="shadow border rounded-lg w-full py-1 px-2 text-gray-700 text-sm" value="0" min="0">
+                            </div>
+                            <div>
+                                <label for="visualCropWidth" class="block text-gray-700 text-xs font-bold">Width:</label>
+                                <input type="number" id="visualCropWidth" class="shadow border rounded-lg w-full py-1 px-2 text-gray-700 text-sm" value="0" min="0">
+                            </div>
+                            <div>
+                                <label for="visualCropHeight" class="block text-gray-700 text-xs font-bold">Height:</label>
+                                <input type="number" id="visualCropHeight" class="shadow border rounded-lg w-full py-1 px-2 text-gray-700 text-sm" value="0" min="0">
+                            </div>
+                            <p class="text-xs text-gray-500 mt-1">Drag and resize the box on the image.</p>
+                        </div>
+
+                        <div id="visualRotateParams" class="space-y-2" style="display: none;">
+                            <h3 class="text-lg font-semibold text-gray-800">Rotation</h3>
+                            <div>
+                                <label for="visualRotateDegrees" class="block text-gray-700 text-xs font-bold">Degrees:</label>
+                                <input type="range" id="visualRotateDegrees" min="0" max="360" value="0" class="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer">
+                                <span id="rotateDegreeValue" class="text-sm text-gray-700">0°</span>
+                            </div>
+                        </div>
+
+                        <div id="visualColorParams" class="space-y-2" style="display: none;">
+                            <h3 class="text-lg font-semibold text-gray-800">Color Adjustments</h3>
+                            <div>
+                                <label for="visualSaturation" class="block text-gray-700 text-xs font-bold">Saturation:</label>
+                                <input type="range" id="visualSaturation" min="0" max="3" step="0.01" value="1" class="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer">
+                                <span id="saturationValue" class="text-sm text-gray-700">1.00</span>
+                            </div>
+                            <div>
+                                <label for="visualBrightness" class="block text-gray-700 text-xs font-bold">Brightness:</label>
+                                <input type="range" id="visualBrightness" min="0" max="3" step="0.01" value="1" class="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer">
+                                <span id="brightnessValue" class="text-sm text-gray-700">1.00</span>
+                            </div>
+                            <div>
+                                <label for="visualContrast" class="block text-gray-700 text-xs font-bold">Contrast:</label>
+                                <input type="range" id="visualContrast" min="0" max="3" step="0.01" value="1" class="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer">
+                                <span id="contrastValue" class="text-sm text-gray-700">1.00</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="modal-buttons">
+                    <button id="executeVisualTransformBtn" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-lg shadow-md transition duration-200">
+                        Apply Transformation
+                    </button>
+                    <button id="cancelVisualTransformBtn" class="bg-gray-200 hover:bg-gray-300 text-gray-700 font-bold py-2 px-4 rounded-lg shadow-md transition duration-200">
+                        Cancel
+                    </button>
+                </div>
+            </div>
+            <div id="visual-transformed-result-section" class="text-center hidden">
+                <p class="text-xl font-semibold mb-4 text-green-700">Transformation Successful!</p>
+                <img id="transformed-image-preview" src="" alt="Transformed Image" class="max-w-full h-auto mx-auto my-4 rounded-lg shadow-md border border-gray-200"/>
+                <div class="flex flex-col items-center gap-4">
+                    <a id="download-transformed-image-btn" href="#" download class="bg-green-600 hover:bg-green-700 text-white font-bold py-3 px-6 rounded-lg shadow-md transition duration-200 text-lg flex items-center justify-center gap-2">
+                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
+                        Download Transformed Image
+                    </a>
+                    <button id="closeTransformedModalBtn" class="bg-gray-300 hover:bg-gray-400 text-gray-800 font-bold py-2 px-4 rounded-lg shadow-md transition duration-200">
+                        Close
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+
+    <div id="manage-groups-modal-overlay" class="modal-overlay">
+        <div id="manage-groups-modal-content" class="modal-content max-w-2xl w-full">
+            <h2 class="text-2xl font-bold text-gray-800 mb-4 text-center">Manage Image Groups</h2>
+
+            <div class="bg-gray-50 p-6 rounded-xl shadow-inner mb-6">
+                <h3 class="text-xl font-semibold text-gray-800 mb-4">Create New Group</h3>
+                <div class="flex flex-col md:flex-row gap-4">
+                    <input type="text" id="newGroupName" class="flex-grow shadow appearance-none border rounded-lg py-3 px-4 text-gray-700 leading-tight focus:outline-none focus:ring-2 focus:ring-purple-500" placeholder="Enter new group name">
+                    <button id="createGroupBtn" class="bg-purple-600 hover:bg-purple-700 text-white font-bold py-2 px-4 rounded-lg shadow-md transition duration-200">
+                        Create Group
+                    </button>
+                </div>
+            </div>
+
+            <div class="bg-gray-50 p-6 rounded-xl shadow-inner">
+                <h3 class="text-xl font-semibold text-gray-800 mb-4">Move Images to Group</h3>
+                <div class="mb-4">
+                    <label for="targetGroupSelect" class="block text-gray-700 text-sm font-bold mb-2 text-left">
+                        Select Target Group
+                    </label>
+                    <select id="targetGroupSelect" class="shadow border rounded-lg w-full py-3 px-4 text-gray-700 leading-tight focus:outline-none focus:ring-2 focus:ring-blue-500">
+                    </select>
+                </div>
+                <div class="mb-4 max-h-60 overflow-y-auto border rounded-lg p-3 bg-white shadow-sm">
+                    <p class="text-gray-700 text-sm font-bold mb-2 text-left">Select Images to Move:</p>
+                    <div id="imagesForGrouping" class="space-y-2">
+                    </div>
+                </div>
+                <div class="modal-buttons">
+                    <button id="moveImagesBtn" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-lg shadow-md transition duration-200">
+                        Move Selected Images
+                    </button>
+                    <button id="cancelManageGroupsBtn" class="bg-gray-200 hover:bg-gray-300 text-gray-700 font-bold py-2 px-4 rounded-lg shadow-md transition duration-200">
+                        Close
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+
+    <footer class="bg-gray-900 text-white py-8 mt-auto">
+        <div class="container mx-auto px-4 text-center md:grid md:grid-cols-4 md:gap-8 md:text-left">
+            <div class="mb-6 md:mb-0 text-center">
+                <h3 class="text-3xl font-bold mb-2">Imagery<span class="text-sm align-top">™</span></h3>
+                <p class="text-sm">&copy; <span id="current-year"></span> Imagery. All rights reserved.</p>
+            </div>
+
+            <div class="mb-6 md:mb-0">
+                <h4 class="text-lg font-semibold mb-3">Quick Links</h4>
+                <ul id="footer-quick-links" class="space-y-2">
+                </ul>
+            </div>
+
+            <div class="mb-6 md:mb-0">
+                <h4 class="text-lg font-semibold mb-3">Connect With Us</h4>
+                <ul class="space-y-2">
+                    <li><a href="#" class="text-gray-300 hover:text-white transition duration-200">Facebook</a></li>
+                    <li><a href="#" class="text-gray-300 hover:text-white transition duration-200">Twitter</a></li>
+                    <li><a href="#" class="text-gray-300 hover:text-white transition duration-200">Instagram</a></li>
+                </ul>
+            </div>
+
+            <div>
+                <h4 class="text-lg font-semibold mb-3">Contact Us</h4>
+                <p class="text-gray-300">support@imagery.com</p>
+                <p class="text-gray-300">123 Gallery Lane, Art City</p>
+            </div>
+        </div>
+    </footer>
+
+    <script>
+        let currentPage = 'home';
+        let loggedInEmail = null;
+        let loggedInUserDisplayId = null;
+        let isAdmin = false;
+        let loggedInUserIsTestUser = false;
+        let currentImages = [];
+        let allImageCollections = [];
+        let currentUploadMode = 'file';
+        let canvas = null;
+        let ctx = null;
+        let originalImage = new Image();
+        let currentTransformImageId = null;
+        let currentCrop = { x: 0, y: 0, width: 0, height: 0 };
+        let currentRotation = 0;
+        let isDraggingCrop = false;
+        let isResizingCrop = false;
+        let resizeHandle = '';
+        let dragStartX, dragStartY;
+        let dragOffsetX, dragOffsetY;
+        let displayedErrorMessages = new Set();
+
+        function showMessage(message, type = 'info') {
+            const msgBox = document.getElementById('message-box');
+            msgBox.textContent = message;
+            msgBox.style.display = 'block';
+            msgBox.classList.remove('bg-green-100', 'text-green-700', 'bg-red-100', 'text-red-700', 'bg-blue-100', 'text-blue-700');
+            msgBox.classList.add('opacity-100');
+
+            if (type === 'success') {
+                msgBox.classList.add('bg-green-100', 'text-green-700');
+            } else if (type === 'error') {
+                msgBox.classList.add('bg-red-100', 'text-red-700');
+            } else {
+                msgBox.classList.add('bg-blue-100', 'text-blue-700');
+            }
+
+            setTimeout(() => {
+                msgBox.classList.remove('opacity-100');
+                msgBox.classList.add('opacity-0');
+                setTimeout(() => msgBox.style.display = 'none', 300);
+            }, 300);
+        }
+
+        function showMessageOnce(message, type = 'info', uniqueId = '') {
+            if (uniqueId && displayedErrorMessages.has(uniqueId)) {
+                return;
+            }
+
+            showMessage(message, type);
+
+            if (uniqueId) {
+                displayedErrorMessages.add(uniqueId);
+            }
+        }
+
+        async function navigateTo(pageId) {
+            localStorage.setItem('lastVisitedPage', pageId);
+            let targetPageId = pageId;
+
+            const authStatus = await checkAuthStatus(false);
+
+            if ((targetPageId === 'gallery' || targetPageId === 'upload' || targetPageId === 'reportBug' || targetPageId === 'adminPanel')) {
+                if (!authStatus.loggedIn) {
+                    showMessage('Please log in to access this page.', 'error');
+                    targetPageId = 'login';
+                } else if (targetPageId === 'adminPanel' && !authStatus.isAdmin) {
+                    showMessage('Access Denied: You must be logged in as an administrator.', 'error');
+                    targetPageId = 'login';
+                }
+            }
+
+            currentPage = targetPageId;
+
+            const pages = document.querySelectorAll('.page-content');
+            pages.forEach(page => {
+                page.style.display = 'none';
+            });
+
+            const targetPageElement = document.getElementById(currentPage + 'Page');
+            if (targetPageElement) {
+                targetPageElement.style.display = 'flex';
+                
+                if (currentPage === 'gallery') {
+                    loadGalleryImages();
+                } else if (currentPage === 'upload') {
+                    const uploadUserInfoSpan = document.querySelector('#upload-user-info span');
+                    if (loggedInUserDisplayId) {
+                        uploadUserInfoSpan.textContent = loggedInUserDisplayId;
+                        document.getElementById('upload-user-info').style.display = 'block';
+                    } else {
+                        document.getElementById('upload-user-info').style.display = 'none';
+                    }
+                    document.getElementById('uploadForm').reset();
+                    setUploadMode('file');
+                    populateImageGroupDropdown();
+                } else if (currentPage === 'adminPanel') {
+                    loadAdminPanelContent();
+                }
+            } else {
+                console.warn(`Page with ID ${currentPage}Page not found.`);
+            }
+
+            updateUIBasedOnAuth();
+        }
+
+        async function checkAuthStatus(updateUI = true) {
+            try {
+                const response = await fetch(`${window.location.origin}/auth_status?_t=${new Date().getTime()}`);
+                const data = await response.json();
+                loggedInEmail = data.username;
+                loggedInUserDisplayId = data.displayId;
+                isAdmin = data.isAdmin;
+                loggedInUserIsTestUser = data.isTestuser;
+                return { loggedIn: data.loggedIn, isAdmin: data.isAdmin, isTestuser: data.isTestuser };
+            } catch (error) {
+                console.error("Error checking auth status:", error);
+                loggedInEmail = null;
+                loggedInUserDisplayId = null;
+                isAdmin = false;
+                loggedInUserIsTestUser = false;
+                return { loggedIn: false, isAdmin: false, isTestuser: false };
+            } finally {
+                if (updateUI) {
+                    updateUIBasedOnAuth();
+                }
+            }
+        }
+
+        function updateFooterLinks() {
+            const footerQuickLinksUl = document.getElementById('footer-quick-links');
+            if (footerQuickLinksUl) {
+                footerQuickLinksUl.innerHTML = '';
+                let linksHtml = `<li><button onclick="navigateTo('home')" class="text-gray-300 hover:text-white transition duration-200">Home</button></li>`;
+                if (loggedInEmail) {
+                    linksHtml += `
+                        <li><button onclick="navigateTo('gallery')" class="text-gray-300 hover:text-white transition duration-200">Gallery</button></li>
+                        <li><button onclick="navigateTo('upload')" class="text-gray-300 hover:text-white transition duration-200">Upload</button></li>
+                    `;
+                    if (!isAdmin) {
+                        linksHtml += `<li><button onclick="navigateTo('reportBug')" class="text-gray-300 hover:text-white transition duration-200">Report Bug</button></li>`;
+                    }
+                    if (isAdmin) {
+                        linksHtml += `<li><button onclick="navigateTo('adminPanel')" class="text-gray-300 hover:text-white transition duration-200">Admin Panel</button></li>`;
+                    }
+                } else {
+                    linksHtml += `
+                        <li><button onclick="navigateTo('login')" class="text-gray-300 hover:text-white transition duration-200">Login</button></li>
+                        <li><button onclick="navigateTo('register')" class="text-gray-300 hover:text-white transition duration-200">Register</button></li>
+                    `;
+                }
+                footerQuickLinksUl.innerHTML = linksHtml;
+            } else {
+                console.error("Footer quick links UL element not found in updateFooterLinks!");
+            }
+        }
+
+        function updateUIBasedOnAuth() {
+            const navHome = document.getElementById('nav-home');
+            const navGallery = document.getElementById('nav-gallery');
+            const navUpload = document.getElementById('nav-upload');
+            const navAdminPanel = document.getElementById('nav-admin-panel');
+            const navLogin = document.getElementById('nav-login');
+            const navRegister = document.getElementById('nav-register');
+            const navLogout = document.getElementById('nav-logout');
+
+            const allNavButtons = document.querySelectorAll('#navbar-links button.nav-link');
+            allNavButtons.forEach(button => {
+                button.classList.remove('bg-blue-600', 'text-white', 'shadow-md');
+                button.classList.add('text-gray-300', 'hover:bg-gray-700', 'hover:text-white');
+                button.style.display = 'none';
+            });
+
+            if (loggedInEmail) {
+                navHome.style.display = 'block';
+                navGallery.style.display = 'block';
+                navUpload.style.display = 'block';
+                navLogout.style.display = 'block';
+                if (isAdmin) {
+                    navAdminPanel.style.display = 'block';
+                }
+            } else {
+                navHome.style.display = 'block';
+                navLogin.style.display = 'block';
+                navRegister.style.display = 'block';
+            }
+
+            const activeNavLink = document.querySelector(`#navbar-links button[data-page="${currentPage}"]`);
+            if (activeNavLink) {
+                activeNavLink.classList.add('bg-blue-600', 'text-white', 'shadow-md');
+                activeNavLink.classList.remove('text-gray-300', 'hover:bg-gray-700', 'hover:text-white');
+            }
+
+            const adminPanelPage = document.getElementById('adminPanelPage');
+            if (adminPanelPage) {
+                if (currentPage === 'adminPanel' && !isAdmin) {
+                    adminPanelPage.style.display = 'none';
+                    document.getElementById('admin-not-logged-in').style.display = 'block';
+                    document.getElementById('admin-content-wrapper').style.display = 'none';
+                } else if (currentPage === 'adminPanel' && isAdmin) {
+                    adminPanelPage.style.display = 'flex';
+                    document.getElementById('admin-not-logged-in').style.display = 'none';
+                    document.getElementById('admin-content-wrapper').style.display = 'block';
+                } else {
+                    document.getElementById('admin-not-logged-in').style.display = 'none';
+                    document.getElementById('admin-content-wrapper').style.display = 'none';
+                }
+            }
+            updateFooterLinks();
+        }
+
+
+        async function registerUser(event) {
+            event.preventDefault();
+            const emailInput = document.getElementById('registerEmail');
+            const email = DOMPurify.sanitize(emailInput.value);
+            const password = document.getElementById('registerPassword').value;
+            const emailWarning = document.getElementById('registerEmailWarning');
+
+            if (!emailInput.checkValidity()) {
+                emailWarning.style.display = 'block';
+                return;
+            } else {
+                emailWarning.style.display = 'none';
+            }
+
+            try {
+                const response = await fetch(`${window.location.origin}/register`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ username: email, password })
+                });
+                const data = await response.json();
+                if (data.success) {
+                    showMessage(data.message, 'success');
+                    document.getElementById('registerForm').reset();
+                    setTimeout(() => navigateTo('login'), 2000);
+                } else {
+                    showMessage(data.message, 'error');
+                }
+            } catch (error) {
+                console.error('Registration error:', error);
+                showMessage('An unexpected error occurred during registration.', 'error');
+            }
+        }
+
+        async function loginUser(event) {
+            event.preventDefault();
+            const emailInput = document.getElementById('loginEmail');
+            const email = DOMPurify.sanitize(emailInput.value);
+            const password = document.getElementById('loginPassword').value;
+            const emailWarning = document.getElementById('loginEmailWarning');
+
+            if (!emailInput.checkValidity()) {
+                emailWarning.style.display = 'block';
+                return;
+            } else {
+                emailWarning.style.display = 'none';
+            }
+
+            try {
+                const response = await fetch(`${window.location.origin}/login`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ username: email, password })
+                });
+                const data = await response.json();
+                if (data.success) {
+                    loggedInEmail = email;
+                    loggedInUserDisplayId = data.displayId;
+                    isAdmin = data.isAdmin;
+                    loggedInUserIsTestUser = data.isTestuser;
+                    showMessage(data.message, 'success');
+                    document.getElementById('loginForm').reset();
+                    setTimeout(() => {
+                        if (isAdmin) {
+                            navigateTo('adminPanel');
+                        } else {
+                            navigateTo('gallery');
+                        }
+                    }, 2000);
+                } else {
+                    showMessage(data.message, 'error');
+                }
+            } catch (error) {
+                console.error('Login error:', error);
+                showMessage('An unexpected error occurred during login. Please try again.', 'error');
+                }
+        }
+
+        async function logoutUser() {
+            try {
+                const response = await fetch(`${window.location.origin}/logout`, { method: 'POST' });
+                const data = await response.json();
+                if (data.success) {
+                    loggedInEmail = null;
+                    loggedInUserDisplayId = null;
+                    isAdmin = false;
+                    loggedInUserIsTestUser = false;
+                    showMessage(data.message, 'info');
+                    navigateTo('home');
+                    location.reload();
+                } else {
+                    showMessage(data.message, 'error');
+                }
+            } catch (error) {
+                console.error('Logout error:', error);
+                showMessage('An unexpected error occurred during logout.', 'error');
+            }
+        }
+
+        async function loadGalleryImages() {
+            const galleryLoading = document.getElementById('gallery-loading');
+            const galleryNotLoggedIn = document.getElementById('gallery-not-logged-in');
+            const galleryEmpty = document.getElementById('gallery-empty');
+            const groupedImageDisplay = document.getElementById('grouped-image-display');
+            const manageGroupsBtnGallery = document.getElementById('manageGroupsBtnGallery');
+
+
+            groupedImageDisplay.innerHTML = '';
+            galleryEmpty.style.display = 'none';
+            galleryNotLoggedIn.style.display = 'none';
+            galleryLoading.style.display = 'block';
+
+            const authStatus = await checkAuthStatus();
+            if (!authStatus.loggedIn) {
+                galleryLoading.style.display = 'none';
+                galleryNotLoggedIn.style.display = 'block';
+                return;
+            }
+
+            if (authStatus.isTestuser) {
+                manageGroupsBtnGallery.style.display = 'block';
+            } else {
+                manageGroupsBtnGallery.style.display = 'none';
+            }
+
+            try {
+                const response = await fetch(`${window.location.origin}/images`);
+                const data = await response.json();
+
+                galleryLoading.style.display = 'none';
+
+                if (data.success) {
+                    currentImages = data.images;
+
+                    if (data.grouped_images.length === 0) {
+                        galleryEmpty.style.display = 'block';
+                    } else {
+                        galleryEmpty.style.display = 'none';
+                        
+                        const systemGroupsPriority = ['My Images', 'Unsorted', 'Converted', 'Transformed']; 
+
+                        const filteredGroups = data.grouped_images.filter(group => {
+                            return true; 
+                        });
+
+
+                        const sortedGroupNames = filteredGroups.map(g => g.name).sort((a, b) => {
+                            const indexA = systemGroupsPriority.indexOf(a);
+                            const indexB = systemGroupsPriority.indexOf(b);
+
+                            if (indexA === -1 && indexB === -1) return a.localeCompare(b);
+                            if (indexA === -1) return 1;
+                            if (indexB === -1) return -1;
+                            return indexA - indexB;
+                        });
+
+                        sortedGroupNames.forEach(groupName => {
+                            const group = filteredGroups.find(g => g.name === groupName);
+                            if (!group) return;
+
+                            const imagesInGroup = group.images;
+                            const groupId = groupName.replace(/\s+/g, '-').toLowerCase();
+
+                            const groupSection = `
+                                <div class="mb-6">
+                                    <div class="accordion-header" onclick="toggleAccordion('accordion-content-${groupId}')">
+                                        <h2 class="text-2xl font-bold text-gray-800">${DOMPurify.sanitize(groupName)} (${imagesInGroup.length})</h2>
+                                        <span class="accordion-arrow text-xl">▶</span>
+                                    </div>
+                                    <div id="accordion-content-${groupId}" class="accordion-content">
+                                        <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
+                                            ${imagesInGroup.map(image => {
+                                                let imageHtml = '';
+                                                const isUnsupportedFormat = image.actual_mimetype === 'application/pdf' || 
+                                                                            image.actual_mimetype.startsWith('video/') ||
+                                                                            image.actual_mimetype.startsWith('audio/');
+
+                                                if (isUnsupportedFormat) {
+                                                    imageHtml = `
+                                                        <div class="w-full h-48 flex items-center justify-center bg-gray-200 text-gray-600 text-center rounded-t-xl">
+                                                            <span class="text-sm">Preview not available<br>(${DOMPurify.sanitize(image.actual_mimetype)})</span>
+                                                        </div>
+                                                    `;
+                                                } else {
+                                                    imageHtml = `
+                                                        <img
+                                                            src="${DOMPurify.sanitize(image.url)}"
+                                                            alt="${DOMPurify.sanitize(image.title)}"
+                                                            class="w-full h-48 object-cover rounded-t-xl"
+                                                            onerror="this.onerror=null; this.src='https://placehold.co/400x300/e0e0e0/333333?text=Error: Invalid Image'; this.classList.add('object-contain');"
+                                                        />
+                                                    `;
+                                                }
+
+                                                const isFeatureEnabled = loggedInUserIsTestUser;
+                                                const featureButtonClass = isFeatureEnabled ? '' : 'disabled-feature-btn';
+                                                
+                                                const editButtonClick = isFeatureEnabled ? `onclick="handleEditImage('${image.id}')"` : `onclick="showMessage('Feature still in production.', 'error')"`;
+                                                const convertButtonClick = isFeatureEnabled ? `onclick="handleConvertImage('${image.id}')"` : `onclick="showMessage('Feature still in production.', 'error')"`;
+                                                const transformButtonClick = isFeatureEnabled ? `onclick="handleVisualTransformImage('${image.id}')"` : `onclick="showMessage('Feature still in production.', 'error')"`;
+                                                const metadataDeletionClick = isFeatureEnabled ? `onclick="handleMetadataDeletion('${image.id}')"` : `onclick="showMessage('Feature still in production.', 'error')"`;
+
+
+                                                return `
+                                                    <div class="bg-white rounded-xl shadow-lg overflow-hidden transform transition duration-300 hover:scale-105 hover:shadow-xl image-card-menu-container">
+                                                        ${imageHtml}
+                                                        <div class="image-card-menu-button" data-image-id="${DOMPurify.sanitize(image.id)}" onclick="toggleImageMenu(event, '${DOMPurify.sanitize(image.id)}')">⋮</div>
+                                                        <div id="image-menu-${DOMPurify.sanitize(image.id)}" class="image-card-dropdown">
+                                                            <button class="${featureButtonClass}" ${editButtonClick}>Edit Details</button>
+                                                            <button class="${featureButtonClass}" ${convertButtonClick}>Convert Format</button>
+                                                            <button class="${featureButtonClass}" ${transformButtonClick}>Transform Image</button>
+                                                            <button class="${featureButtonClass}" ${metadataDeletionClick}>Delete Metadata</button>
+                                                            <a href="${DOMPurify.sanitize(image.url)}" download="${DOMPurify.sanitize(image.filename)}" class="text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">Download</a>
+                                                            <button onclick="showDeleteConfirmation('${DOMPurify.sanitize(image.id)}', '${DOMPurify.sanitize(image.type)}')">Delete</button>
+                                                        </div>
+                                                        <div class="p-4">
+                                                            <h3 class="text-xl font-semibold text-gray-800 mb-2">${DOMPurify.sanitize(image.title)}</h3>
+                                                            <p class="text-gray-600 text-sm">${DOMPurify.sanitize(image.description || '')}</p>
+                                                            <p class="text-gray-500 text-xs mt-2">Uploaded by: ${DOMPurify.sanitize(image.uploadedByDisplayId)}</p>
+                                                            <p class="text-gray-500 text-xs">On: ${new Date(image.timestamp).toLocaleDateString()}</p>
+                                                        </div>
+                                                    </div>
+                                                `;
+                                            }).join('')}
+                                        </div>
+                                    </div>
+                                </div>
+                            `;
+                            groupedImageDisplay.insertAdjacentHTML('beforeend', groupSection);
+                        });
+                        document.addEventListener('click', closeAllImageMenus);
+                    }
+                } else {
+                    showMessage(data.message, 'error');
+                    galleryNotLoggedIn.style.display = 'block';
+                }
+            } catch (error) {
+                console.error("Error loading gallery images:", error);
+                showMessage('Failed to load images. Please try again later.', 'error');
+                galleryLoading.style.display = 'none';
+            }
+        }
+
+        function toggleAccordion(contentId) {
+            const content = document.getElementById(contentId);
+            const header = content.previousElementSibling;
+            
+            document.querySelectorAll('.accordion-content.open').forEach(openContent => {
+                if (openContent.id !== contentId) {
+                    openContent.classList.remove('open');
+                    openContent.previousElementSibling.classList.remove('open');
+                }
+            });
+
+            content.classList.toggle('open');
+            header.classList.toggle('open');
+        }
+
+        function toggleImageMenu(event, imageId) {
+            event.stopPropagation();
+            const menu = document.getElementById(`image-menu-${imageId}`);
+            document.querySelectorAll('.image-card-dropdown.open').forEach(openMenu => {
+                if (openMenu.id !== `image-menu-${imageId}`) {
+                    openMenu.classList.remove('open');
+                }
+            });
+            menu.classList.toggle('open');
+        }
+
+        function closeAllImageMenus(event) {
+            document.querySelectorAll('.image-card-dropdown.open').forEach(openMenu => {
+                if (event && (openMenu.contains(event.target) || event.target.closest('.image-card-menu-button'))) {
+                    return;
+                }
+                openMenu.classList.remove('open');
+            });
+        }
+
+        let onConfirmCallback = null;
+
+        function showConfirmationModal(message, onConfirm, confirmText = 'Confirm', cancelText = 'Cancel', type = 'info') {
+            closeAllImageMenus();
+            const modalOverlay = document.getElementById('confirmation-modal-overlay');
+            const modalMessage = document.getElementById('confirmation-modal-message');
+            const modalButtonsDiv = document.getElementById('confirmation-modal-buttons');
+
+            modalMessage.textContent = message;
+            onConfirmCallback = onConfirm;
+
+            modalButtonsDiv.innerHTML = '';
+
+            const confirmBtn = document.createElement('button');
+            confirmBtn.textContent = confirmText;
+            confirmBtn.classList.add('confirm-btn');
+            if (type === 'delete') {
+                confirmBtn.classList.add('bg-red-600', 'hover:bg-red-700', 'text-white');
+                confirmBtn.classList.remove('bg-blue-600', 'hover:bg-blue-700');
+            } else {
+                confirmBtn.classList.add('bg-blue-600', 'hover:bg-blue-700', 'text-white');
+                confirmBtn.classList.remove('bg-red-600', 'hover:bg-red-700');
+            }
+            confirmBtn.onclick = () => {
+                if (onConfirmCallback) {
+                    onConfirmCallback(true);
+                }
+                hideConfirmationModal();
+            };
+            modalButtonsDiv.appendChild(confirmBtn);
+
+            const cancelBtn = document.createElement('button');
+            cancelBtn.textContent = cancelText;
+            cancelBtn.classList.add('cancel-btn', 'bg-gray-200', 'hover:bg-gray-300', 'text-gray-700');
+            cancelBtn.onclick = () => {
+                if (onConfirmCallback) {
+                    onConfirmCallback(false);
+                }
+                hideConfirmationModal();
+            };
+            modalButtonsDiv.appendChild(cancelBtn);
+
+            modalOverlay.style.display = 'flex';
+            modalOverlay.classList.add('open');
+        }
+
+        function hideConfirmationModal() {
+            const modalOverlay = document.getElementById('confirmation-modal-overlay');
+            modalOverlay.classList.remove('open');
+            setTimeout(() => {
+                modalOverlay.style.display = 'none';
+                onConfirmCallback = null;
+            }, 300);
+        }
+
+        function showDeleteConfirmation(imageId, imageType) {
+            closeAllImageMenus();
+
+            let message = 'Are you sure you want to delete this image? This action cannot be undone.';
+            let confirmText1 = 'Delete';
+            let confirmText2 = 'Delete Original Only';
+            let showTwoOptions = false;
+
+            if (imageType === 'original') {
+                message = 'This is an uploaded image. Would you like to delete it?';
+                showTwoOptions = true;
+            }
+
+            const modalButtonsDiv = document.getElementById('confirmation-modal-buttons');
+            modalButtonsDiv.innerHTML = '';
+
+            const modalMessage = document.getElementById('confirmation-modal-message');
+            modalMessage.textContent = message;
+
+            if (showTwoOptions) {
+                const deleteOriginalAndAllBtn = document.createElement('button');
+                deleteOriginalAndAllBtn.textContent = 'Delete Original & All Copies';
+                deleteOriginalAndAllBtn.classList.add('confirm-btn', 'bg-red-600', 'hover:bg-red-700', 'text-white');
+                deleteOriginalAndAllBtn.onclick = async () => {
+                    await deleteImageConfirmed(imageId, true);
+                    hideConfirmationModal();
+                };
+                modalButtonsDiv.appendChild(deleteOriginalAndAllBtn);
+
+                const deleteOriginalOnlyBtn = document.createElement('button');
+                deleteOriginalOnlyBtn.textContent = 'Delete Uploaded Only (Keep Copies)';
+                deleteOriginalOnlyBtn.classList.add('confirm-btn', 'bg-yellow-600', 'hover:bg-yellow-700', 'text-white');
+                deleteOriginalOnlyBtn.onclick = async () => {
+                    await deleteImageConfirmed(imageId, false);
+                    hideConfirmationModal();
+                };
+                modalButtonsDiv.appendChild(deleteOriginalOnlyBtn);
+
+            } else {
+                const deleteBtn = document.createElement('button');
+                deleteBtn.textContent = confirmText1;
+                deleteBtn.classList.add('confirm-btn', 'bg-red-600', 'hover:bg-red-700', 'text-white');
+                deleteBtn.onclick = async () => {
+                    await deleteImageConfirmed(imageId, false);
+                    hideConfirmationModal();
+                };
+                modalButtonsDiv.appendChild(deleteBtn);
+            }
+
+            const cancelBtn = document.createElement('button');
+            cancelBtn.textContent = 'Cancel';
+            cancelBtn.classList.add('cancel-btn', 'bg-gray-200', 'hover:bg-gray-300', 'text-gray-700');
+            cancelBtn.onclick = () => {
+                showMessage('Deletion cancelled.', 'info');
+                hideConfirmationModal();
+            };
+            modalButtonsDiv.appendChild(cancelBtn);
+
+            const modalOverlay = document.getElementById('confirmation-modal-overlay');
+            modalOverlay.style.display = 'flex';
+            modalOverlay.classList.add('open');
+        }
+
+        async function deleteImageConfirmed(imageId, deleteAllDerived) {
+            try {
+                const response = await fetch(`${window.location.origin}/delete_image`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ imageId, deleteAllDerived })
+                });
+                const data = await response.json();
+                if (data.success) {
+                    showMessage(data.message, 'success');
+                    loadGalleryImages();
+                } else {
+                    showMessage(data.message, 'error');
+                }
+            } catch (error) {
+                console.error('Delete image error:', error);
+                showMessage('An unexpected error occurred during image deletion.', 'error');
+            }
+        }
+
+        function handleEditImage(imageId) {
+            if (!loggedInUserIsTestUser) {
+                showMessage('Feature still in production.', 'error');
+                return;
+            }
+            closeAllImageMenus();
+            const image = currentImages.find(img => img.id === imageId);
+            if (!image) {
+                showMessage('Image not found for editing.', 'error');
+                return;
+            }
+
+            const editModalOverlay = document.getElementById('edit-modal-overlay');
+            document.getElementById('editImageId').value = image.id;
+            document.getElementById('editTitle').value = image.title;
+            document.getElementById('editDescription').value = image.description;
+            
+            const editGroupSelect = document.getElementById('editGroup');
+            editGroupSelect.innerHTML = '';
+            allImageCollections.forEach(collection => {
+                const option = document.createElement('option');
+                option.value = collection.name;
+                option.textContent = collection.name;
+                if (collection.name === image.group) {
+                    option.selected = true;
+                }
+                editGroupSelect.appendChild(option);
+            });
+
+
+            editModalOverlay.style.display = 'flex';
+            editModalOverlay.classList.add('open');
+        }
+
+        async function editImageDetails() {
+            const imageId = document.getElementById('editImageId').value;
+            const title = DOMPurify.sanitize(document.getElementById('editTitle').value);
+            const description = DOMPurify.sanitize(document.getElementById('editDescription').value);
+            const group_name = DOMPurify.sanitize(document.getElementById('editGroup').value);
+
+            try {
+                const response = await fetch(`${window.location.origin}/edit_image_details`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ imageId, title, description, group_name })
+                });
+                const data = await response.json();
+
+                if (data.success) {
+                    showMessage(data.message, 'success');
+                    hideEditModal();
+                    loadGalleryImages();
+                } else {
+                    showMessage(data.message, 'error');
+                }
+            } catch (error) {
+                console.error('Edit image details error:', error);
+                showMessage('An unexpected error occurred while updating image details.', 'error');
+            }
+        }
+
+        function hideEditModal() {
+            const editModalOverlay = document.getElementById('edit-modal-overlay');
+            editModalOverlay.classList.remove('open');
+            setTimeout(() => {
+                editModalOverlay.style.display = 'none';
+            }, 300);
+        }
+
+        const ALL_CONVERSION_FORMATS = ['jpg', 'png', 'gif', 'bmp', 'tiff', 'pdf'];
+        const MIME_TYPE_TO_EXT_MAP = {
+            'image/jpeg': 'jpg',
+            'image/png': 'png',
+            'image/gif': 'gif',
+            'image/bmp': 'bmp',
+            'image/tiff': 'tiff',
+            'application/pdf': 'pdf'
+        };
+
+        function updateConversionFormatOptions(currentMimeType) {
+            const conversionFormatSelect = document.getElementById('conversionFormat');
+            conversionFormatSelect.innerHTML = '';
+
+            const currentFormatExt = MIME_TYPE_TO_EXT_MAP[currentMimeType] || '';
+
+            ALL_CONVERSION_FORMATS.forEach(format => {
+                if (format !== currentFormatExt) {
+                    const option = document.createElement('option');
+                    option.value = format;
+                    option.textContent = format.toUpperCase();
+                    conversionFormatSelect.appendChild(option);
+                }
+            });
+
+            if (conversionFormatSelect.options.length === 0) {
+                const option = document.createElement('option');
+                option.value = "";
+                option.textContent = "No other formats available";
+                option.disabled = true;
+                conversionFormatSelect.appendChild(option);
+            }
+        }
+
+        function handleConvertImage(imageId) {
+            if (!loggedInUserIsTestUser) {
+                showMessage('Feature still in production.', 'error');
+                return;
+            }
+            closeAllImageMenus();
+            const image = currentImages.find(img => img.id === imageId);
+            if (!image) {
+                showMessage('Image not found for conversion.', 'error');
+                return;
+            }
+
+            const conversionModalOverlay = document.getElementById('conversion-modal-overlay');
+            document.getElementById('convertImageId').value = image.id;
+            document.getElementById('originalImageMimeType').value = image.actual_mimetype;
+
+            updateConversionFormatOptions(image.actual_mimetype);
+
+            document.getElementById('convert-image-form').classList.remove('hidden');
+            document.getElementById('conversion-result-section').classList.add('hidden');
+
+            conversionModalOverlay.style.display = 'flex';
+            conversionModalOverlay.classList.add('open');
+        }
+
+        async function executeConversion() {
+            const imageId = document.getElementById('convertImageId').value;
+            const targetFormat = document.getElementById('conversionFormat').value;
+
+            if (!targetFormat) {
+                showMessage('Please select a target format.', 'error');
+                return;
+            }
+
+            try {
+                const response = await fetch(`${window.location.origin}/convert_image`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ imageId, targetFormat })
+                });
+                const data = await response.json();
+
+                if (data.success) {
+                    showMessage(data.message, 'success');
+                    document.getElementById('convert-image-form').classList.add('hidden');
+                    document.getElementById('conversion-result-section').classList.remove('hidden');
+                    document.getElementById('converted-image-preview').src = data.newImageUrl;
+                    document.getElementById('download-converted-image-btn').href = data.newImageUrl;
+                    document.getElementById('download-converted-image-btn').setAttribute('data-image-id', data.newImageId);
+                    loadGalleryImages();
+                } else {
+                    showMessage(data.message, 'error');
+                    document.getElementById('conversion-result-section').classList.add('hidden');
+                }
+            } catch (error) {
+                console.error('Image conversion error:', error);
+                showMessage('An unexpected error occurred during image conversion.', 'error');
+                document.getElementById('conversion-result-section').classList.add('hidden');
+            }
+        }
+
+        function hideConversionModal() {
+            const conversionModalOverlay = document.getElementById('conversion-modal-overlay');
+            conversionModalOverlay.classList.remove('open');
+            setTimeout(() => {
+                conversionModalOverlay.style.display = 'none';
+                document.getElementById('convert-image-form').classList.remove('hidden');
+                document.getElementById('conversion-result-section').classList.add('hidden');
+                document.getElementById('conversionFormat').value = '';
+            }, 300);
+        }
+
+        function handleVisualTransformImage(imageId) {
+            if (!loggedInUserIsTestUser) {
+                showMessage('Feature still in production.', 'error');
+                return;
+            }
+            closeAllImageMenus();
+            const image = currentImages.find(img => img.id === imageId);
+            if (!image) {
+                showMessage('Image not found for transformation.', 'error');
+                return;
+            }
+
+            currentTransformImageId = imageId;
+            document.getElementById('visualTransformImageId').value = image.id;
+            document.getElementById('originalImageURL').value = image.url;
+
+            canvas = document.getElementById('transformCanvas');
+            ctx = canvas.getContext('2d');
+
+            document.getElementById('visualTransformOperation').value = 'none';
+            document.getElementById('visualRotateDegrees').value = 0;
+            document.getElementById('rotateDegreeValue').textContent = '0°';
+            document.getElementById('visualSaturation').value = 1;
+            document.getElementById('saturationValue').textContent = '1.00';
+            document.getElementById('visualBrightness').value = 1;
+            document.getElementById('brightnessValue').textContent = '1.00';
+            document.getElementById('visualContrast').value = 1;
+            document.getElementById('contrastValue').textContent = '1.00';
+            
+            currentRotation = 0;
+            currentCrop = { x: 0, y: 0, width: 0, height: 0 };
+
+            document.getElementById('transform-controls-section').classList.remove('hidden');
+            document.getElementById('visual-transformed-result-section').classList.add('hidden');
+            updateVisualTransformParamsVisibility();
+
+            const visualTransformModalOverlay = document.getElementById('transform-visual-modal-overlay');
+            visualTransformModalOverlay.style.display = 'flex';
+            visualTransformModalOverlay.classList.add('open');
+
+            originalImage = new Image();
+            originalImage.onload = () => {
+                const aspectRatio = originalImage.width / originalImage.height;
+                const maxWidth = canvas.parentElement.offsetWidth * 0.9;
+                const maxHeight = window.innerHeight * 0.6;
+
+                let drawWidth = originalImage.width;
+                let drawHeight = originalImage.height;
+
+                if (drawWidth > maxWidth) {
+                    drawWidth = maxWidth;
+                    drawHeight = drawWidth / aspectRatio;
+                }
+                if (drawHeight > maxHeight) {
+                    drawHeight = maxHeight;
+                    drawWidth = drawHeight * aspectRatio;
+                }
+
+                canvas.width = drawWidth;
+                canvas.height = drawHeight;
+
+                currentCrop = { x: 0, y: 0, width: originalImage.width, height: originalImage.height };
+                updateCropInputs();
+
+                drawCanvas();
+            };
+            originalImage.onerror = () => {
+                showMessage('Failed to load image for visual transformation. Please check the image URL.', 'error');
+                hideVisualTransformModal();
+            };
+            originalImage.src = image.url;
+        }
+
+        function drawCanvas() {
+            if (!ctx || !originalImage.complete) return;
+
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            ctx.save();
+
+            const saturationValue = parseFloat(document.getElementById('visualSaturation').value);
+            const brightnessValue = parseFloat(document.getElementById('visualBrightness').value);
+            const contrastValue = parseFloat(document.getElementById('visualContrast').value);
+            
+            canvas.style.filter = `saturate(${saturationValue}) brightness(${brightnessValue}) contrast(${contrastValue})`;
+            
+            ctx.translate(canvas.width / 2, canvas.height / 2);
+            ctx.rotate(currentRotation * Math.PI / 180);
+            ctx.translate(-canvas.width / 2, -canvas.height / 2);
+
+            const imgAspectRatio = originalImage.width / originalImage.height;
+            let drawWidth = canvas.width;
+            let drawHeight = canvas.height;
+
+            if (canvas.width / canvas.height > imgAspectRatio) {
+                drawWidth = canvas.height * imgAspectRatio;
+            } else {
+                drawHeight = canvas.width / imgAspectRatio;
+            }
+            const offsetX = (canvas.width - drawWidth) / 2;
+            const offsetY = (canvas.height - drawHeight) / 2;
+
+            ctx.drawImage(originalImage, offsetX, offsetY, drawWidth, drawHeight);
+            ctx.restore();
+
+            if (document.getElementById('visualTransformOperation').value === 'crop') {
+                const scaleX = drawWidth / originalImage.width;
+                const scaleY = drawHeight / originalImage.height;
+
+                ctx.strokeStyle = 'red';
+                ctx.lineWidth = 2;
+                ctx.setLineDash([5, 5]);
+                ctx.strokeRect(currentCrop.x * scaleX + offsetX, currentCrop.y * scaleY + offsetY, currentCrop.width * scaleX, currentCrop.height * scaleY);
+                ctx.setLineDash([]);
+
+                const handleSize = 8;
+                ctx.fillStyle = 'white';
+                ctx.strokeStyle = 'blue';
+                ctx.lineWidth = 1;
+
+                const handles = [
+                    { x: currentCrop.x * scaleX + offsetX, y: currentCrop.y * scaleY + offsetY, cursor: 'nw-resize', name: 'nw' },
+                    { x: (currentCrop.x + currentCrop.width) * scaleX + offsetX, y: currentCrop.y * scaleY + offsetY, cursor: 'ne-resize', name: 'ne' },
+                    { x: currentCrop.x * scaleX + offsetX, y: (currentCrop.y + currentCrop.height) * scaleY + offsetY, cursor: 'sw-resize', name: 'sw' },
+                    { x: (currentCrop.x + currentCrop.width) * scaleX + offsetX, y: (currentCrop.y + currentCrop.height) * scaleY + offsetY, cursor: 'se-resize', name: 'se' },
+                    { x: (currentCrop.x + currentCrop.width / 2) * scaleX + offsetX, y: currentCrop.y * scaleY + offsetY, cursor: 'n-resize', name: 'n' },
+                    { x: (currentCrop.x + currentCrop.width / 2) * scaleX + offsetX, y: (currentCrop.y + currentCrop.height) * scaleY + offsetY, cursor: 's-resize', name: 's' },
+                    { x: (currentCrop.x + currentCrop.width) * scaleX + offsetX, y: (currentCrop.y + currentCrop.height / 2) * scaleY + offsetY, cursor: 'e-resize', name: 'e' },
+                    { x: currentCrop.x * scaleX + offsetX, y: (currentCrop.y + currentCrop.height / 2) * scaleY + offsetY, cursor: 'w-resize', name: 'w' }
+                ];
+
+                handles.forEach(handle => {
+                    ctx.fillRect(handle.x - handleSize / 2, handle.y - handleSize / 2, handleSize, handleSize);
+                    ctx.strokeRect(handle.x - handleSize / 2, handle.y - handleSize / 2, handleSize, handleSize);
+                });
+            }
+        }
+
+        function getMousePos(event) {
+            const rect = canvas.getBoundingClientRect();
+            const x = event.clientX - rect.left;
+            const y = event.clientY - rect.top;
+            return { x, y };
+        }
+
+        function getCanvasToImageScale() {
+            const imgAspectRatio = originalImage.width / originalImage.height;
+            let drawWidth = canvas.width;
+            let drawHeight = canvas.height;
+
+            if (canvas.width / canvas.height > imgAspectRatio) {
+                drawWidth = canvas.height * imgAspectRatio;
+            } else {
+                drawHeight = canvas.width / imgAspectRatio;
+            }
+            const offsetX = (canvas.width - drawWidth) / 2;
+            const offsetY = (canvas.height - drawHeight) / 2;
+
+            return {
+                scaleX: originalImage.width / drawWidth,
+                scaleY: originalImage.height / drawHeight,
+                offsetX: offsetX,
+                offsetY: offsetY
+            };
+        }
+
+        function isPointInHandle(x, y, handle) {
+            const handleSize = 8;
+            return x > handle.x - handleSize / 2 && x < handle.x + handleSize / 2 &&
+                   y > handle.y - handleSize / 2 && y < handle.y + handleSize / 2;
+        }
+
+        function canvasMouseDown(e) {
+            if (!canvas || document.getElementById('visualTransformOperation').value !== 'crop') return;
+            const mousePos = getMousePos(e);
+            const { scaleX, scaleY, offsetX, offsetY } = getCanvasToImageScale();
+
+            const cropRectCanvas = {
+                x: currentCrop.x / scaleX + offsetX,
+                y: currentCrop.y / scaleY + offsetY,
+                width: currentCrop.width / scaleX,
+                height: currentCrop.height / scaleY
+            };
+
+            const handleSize = 8;
+            const handles = [
+                { x: cropRectCanvas.x, y: cropRectCanvas.y, name: 'nw', cursor: 'nw-resize' },
+                { x: cropRectCanvas.x + cropRectCanvas.width, y: cropRectCanvas.y, name: 'ne', cursor: 'ne-resize' },
+                { x: cropRectCanvas.x, y: cropRectCanvas.y + cropRectCanvas.height, name: 'sw', cursor: 'sw-resize' },
+                { x: cropRectCanvas.x + cropRectCanvas.width, y: cropRectCanvas.y + cropRectCanvas.height, name: 'se', cursor: 'se-resize' },
+                { x: cropRectCanvas.x + cropRectCanvas.width / 2, y: cropRectCanvas.y, name: 'n', cursor: 'n-resize' },
+                { x: cropRectCanvas.x + cropRectCanvas.width / 2, y: cropRectCanvas.y + cropRectCanvas.height, name: 's', cursor: 's-resize' },
+                { x: cropRectCanvas.x + cropRectCanvas.width, y: cropRectCanvas.y + cropRectCanvas.height / 2, name: 'e', cursor: 'e-resize' },
+                    { x: cropRectCanvas.x, y: currentCrop.y + currentCrop.height / 2, name: 'w', cursor: 'w-resize' }
+                ];
+
+            for (const handle of handles) {
+                if (isPointInHandle(mousePos.x, mousePos.y, handle)) {
+                    isResizingCrop = true;
+                    resizeHandle = handle.name;
+                    dragStartX = mousePos.x;
+                    dragStartY = mousePos.y;
+                    return;
+                }
+            }
+
+            if (mousePos.x > cropRectCanvas.x && mousePos.x < cropRectCanvas.x + cropRectCanvas.width &&
+                mousePos.y > cropRectCanvas.y && mousePos.y < cropRectCanvas.y + cropRectCanvas.height) {
+                isDraggingCrop = true;
+                dragStartX = mousePos.x;
+                dragStartY = mousePos.y;
+                dragOffsetX = mousePos.x - cropRectCanvas.x;
+                dragOffsetY = mousePos.y - cropRectCanvas.y;
+            }
+        }
+
+        function canvasMouseMove(e) {
+            if (!canvas || document.getElementById('visualTransformOperation').value !== 'crop') return;
+            const mousePos = getMousePos(e);
+            const { scaleX, scaleY, offsetX, offsetY } = getCanvasToImageScale();
+
+            if (isResizingCrop) {
+                let newX = currentCrop.x;
+                let newY = currentCrop.y;
+                let newWidth = currentCrop.width;
+                let newHeight = currentCrop.height;
+
+                const dx = (mousePos.x - dragStartX) * scaleX;
+                const dy = (mousePos.y - dragStartY) * scaleY;
+
+                switch (resizeHandle) {
+                    case 'nw':
+                        newX = currentCrop.x + dx;
+                        newY = currentCrop.y + dy;
+                        newWidth = currentCrop.width - dx;
+                        newHeight = currentCrop.height - dy;
+                        break;
+                    case 'ne':
+                        newY = currentCrop.y + dy;
+                        newWidth = currentCrop.width + dx;
+                        newHeight = currentCrop.height - dy;
+                        break;
+                    case 'sw':
+                        newX = currentCrop.x + dx;
+                        newWidth = currentCrop.width - dx;
+                        newHeight = currentCrop.height + dy;
+                        break;
+                    case 'se':
+                        newWidth = currentCrop.width + dx;
+                        newHeight = currentCrop.height + dy;
+                        break;
+                    case 'n':
+                        newY = currentCrop.y + dy;
+                        newHeight = currentCrop.height - dy;
+                        break;
+                    case 's':
+                        newHeight = currentCrop.height + dy;
+                        break;
+                    case 'e':
+                        newWidth = currentCrop.width + dx;
+                        break;
+                    case 'w':
+                        newX = currentCrop.x + dx;
+                        newWidth = currentCrop.width - dx;
+                        break;
+                }
+
+                dragStartX = mousePos.x;
+                dragStartY = mousePos.y;
+
+                newWidth = Math.max(1, newWidth);
+                newHeight = Math.max(1, newHeight);
+
+                newX = Math.max(0, newX);
+                newY = Math.max(0, newY);
+                
+                newWidth = Math.min(newWidth, originalImage.width - newX);
+                newHeight = Math.min(newHeight, originalImage.height - newY);
+
+                currentCrop = { x: newX, y: newY, width: newWidth, height: newHeight };
+                updateCropInputs();
+                drawCanvas();
+            } else if (isDraggingCrop) {
+                const dx = (mousePos.x - dragStartX) * scaleX;
+                const dy = (mousePos.y - dragStartY) * scaleY;
+
+                let newX = currentCrop.x + dx;
+                let newY = currentCrop.y + dy;
+
+                newX = Math.max(0, Math.min(newX, originalImage.width - currentCrop.width));
+                newY = Math.max(0, Math.min(newY, originalImage.height - currentCrop.height));
+
+                currentCrop.x = newX;
+                currentCrop.y = newY;
+
+                dragStartX = mousePos.x;
+                dragStartY = mousePos.y;
+
+                updateCropInputs();
+                drawCanvas();
+            } else {
+                const cropRectCanvas = {
+                    x: currentCrop.x / scaleX + offsetX,
+                    y: currentCrop.y / scaleY + offsetY,
+                    width: currentCrop.width / scaleX,
+                    height: currentCrop.height / scaleY
+                };
+
+                let cursor = 'default';
+                for (const handle of [
+                    { x: cropRectCanvas.x, y: cropRectCanvas.y, name: 'nw', cursor: 'nw-resize' },
+                    { x: cropRectCanvas.x + cropRectCanvas.width, y: cropRectCanvas.y, name: 'ne', cursor: 'ne-resize' },
+                    { x: cropRectCanvas.x, y: cropRectCanvas.y + cropRectCanvas.height, name: 'sw', cursor: 'sw-resize' },
+                    { x: cropRectCanvas.x + cropRectCanvas.width, y: cropRectCanvas.y + cropRectCanvas.height, name: 'se', cursor: 'se-resize' },
+                    { x: cropRectCanvas.x + cropRectCanvas.width / 2, y: cropRectCanvas.y, name: 'n', cursor: 'n-resize' },
+                    { x: cropRectCanvas.x + cropRectCanvas.width / 2, y: cropRectCanvas.y + cropRectCanvas.height, name: 's', cursor: 's-resize' },
+                    { x: cropRectCanvas.x + cropRectCanvas.width, y: cropRectCanvas.y + cropRectCanvas.height / 2, name: 'e', cursor: 'e-resize' },
+                    { x: currentCrop.x, y: currentCrop.y + currentCrop.height / 2, name: 'w', cursor: 'w-resize' }
+                ]) {
+                    if (isPointInHandle(mousePos.x, mousePos.y, handle)) {
+                        cursor = handle.cursor;
+                        break;
+                    }
+                }
+                if (cursor === 'default' && mousePos.x > cropRectCanvas.x && mousePos.x < cropRectCanvas.x + cropRectCanvas.width &&
+                    mousePos.y > cropRectCanvas.y && mousePos.y < cropRectCanvas.y + cropRectCanvas.height) {
+                    cursor = 'move';
+                }
+                canvas.style.cursor = cursor;
+            }
+        }
+
+        function canvasMouseUp() {
+            isDraggingCrop = false;
+            isResizingCrop = false;
+            resizeHandle = '';
+            if (canvas) canvas.style.cursor = 'default';
+        }
+
+        function updateCropInputs() {
+            document.getElementById('visualCropX').value = Math.round(currentCrop.x);
+            document.getElementById('visualCropY').value = Math.round(currentCrop.y);
+            document.getElementById('visualCropWidth').value = Math.round(currentCrop.width);
+            document.getElementById('visualCropHeight').value = Math.round(currentCrop.height);
+        }
+
+        function updateVisualTransformParamsVisibility() {
+            if (!canvas) {
+                console.warn("Canvas not initialized, cannot update transform params visibility.");
+                return;
+            }
+            const operation = document.getElementById('visualTransformOperation').value;
+            document.getElementById('visualCropParams').style.display = 'none';
+            document.getElementById('visualRotateParams').style.display = 'none';
+            document.getElementById('visualColorParams').style.display = 'none';
+
+
+            canvas.removeEventListener('mousedown', canvasMouseDown);
+            canvas.removeEventListener('mousemove', canvasMouseMove);
+            canvas.removeEventListener('mouseup', canvasMouseUp);
+            canvas.style.cursor = 'default';
+            canvas.style.filter = '';
+            currentRotation = 0;
+            document.getElementById('visualRotateDegrees').value = 0;
+            document.getElementById('rotateDegreeValue').textContent = '0°';
+
+
+            if (operation === 'crop') {
+                document.getElementById('visualCropParams').style.display = 'block';
+                canvas.addEventListener('mousedown', canvasMouseDown);
+                canvas.addEventListener('mousemove', canvasMouseMove);
+                canvas.addEventListener('mouseup', canvasMouseUp);
+                if (originalImage.complete) {
+                    currentCrop = { x: 0, y: 0, width: originalImage.width, height: originalImage.height };
+                    updateCropInputs();
+                }
+            } else if (operation === 'rotate') {
+                document.getElementById('visualRotateParams').style.display = 'block';
+            } else if (['saturation', 'brightness', 'contrast'].includes(operation)) {
+                document.getElementById('visualColorParams').style.display = 'block';
+                document.getElementById('visualSaturation').value = 1;
+                document.getElementById('saturationValue').textContent = '1.00';
+                document.getElementById('visualBrightness').value = 1;
+                document.getElementById('brightnessValue').textContent = '1.00';
+                document.getElementById('visualContrast').value = 1;
+                document.getElementById('contrastValue').textContent = '1.00';
+            }
+            drawCanvas();
+        }
+
+        async function executeVisualTransform() {
+            const imageId = document.getElementById('visualTransformImageId').value;
+            const operation = document.getElementById('visualTransformOperation').value;
+            let params = {};
+
+            if (operation === 'none') {
+                showMessage('Please select a transformation operation.', 'error');
+                return;
+            }
+
+            if (operation === 'crop') {
+                const x = parseInt(document.getElementById('visualCropX').value);
+                const y = parseInt(document.getElementById('visualCropY').value);
+                const width = parseInt(document.getElementById('visualCropWidth').value);
+                const height = parseInt(document.getElementById('visualCropHeight').value);
+
+                if (isNaN(x) || isNaN(y) || isNaN(width) || isNaN(height) || width <= 0 || height <= 0) {
+                    showMessage('Invalid crop parameters. X, Y, Width, Height must be valid numbers and Width/Height > 0.', 'error');
+                    return;
+                }
+                params = { x, y, width, height };
+            } else if (operation === 'rotate') {
+                const degrees = parseFloat(document.getElementById('visualRotateDegrees').value);
+                if (isNaN(degrees)) {
+                    showMessage('Invalid rotate degrees. Must be a number.', 'error');
+                    return;
+                }
+                params = { degrees };
+            } else if (operation === 'saturation') {
+                const value = parseFloat(document.getElementById('visualSaturation').value);
+                if (isNaN(value)) {
+                    showMessage('Invalid saturation value. Must be a number.', 'error');
+                    return;
+                }
+                params = { value };
+            } else if (operation === 'brightness') {
+                const value = parseFloat(document.getElementById('visualBrightness').value);
+                if (isNaN(value)) {
+                    showMessage('Invalid brightness value. Must be a number.', 'error');
+                    return;
+                }
+                params = { value };
+            } else if (operation === 'contrast') {
+                const value = parseFloat(document.getElementById('visualContrast').value);
+                if (isNaN(value)) {
+                    showMessage('Invalid contrast value. Must be a number.', 'error');
+                    return;
+                }
+                params = { value };
+            }
+
+            try {
+                const response = await fetch(`${window.location.origin}/apply_visual_transform`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ imageId, transformType: operation, params: params })
+                });
+                const data = await response.json();
+
+                if (data.success) {
+                    showMessage(data.message, 'success');
+                    document.getElementById('transform-controls-section').classList.add('hidden');
+                    document.getElementById('visual-transformed-result-section').classList.remove('hidden');
+                    document.getElementById('transformed-image-preview').src = data.newImageUrl;
+                    document.getElementById('download-transformed-image-btn').href = data.newImageUrl;
+                    document.getElementById('download-transformed-image-btn').setAttribute('data-image-id', data.newImageId);
+                    loadGalleryImages();
+                } else {
+                    showMessage(data.message, 'error');
+                    document.getElementById('visual-transformed-result-section').classList.add('hidden');
+                }
+            } catch (error) {
+                console.error('Image transformation error:', error);
+                showMessage('An unexpected error occurred during image transformation.', 'error');
+                document.getElementById('visual-transformed-result-section').classList.add('hidden');
+            }
+        }
+
+        function hideVisualTransformModal() {
+            const visualTransformModalOverlay = document.getElementById('transform-visual-modal-overlay');
+            visualTransformModalOverlay.classList.remove('open');
+            setTimeout(() => {
+                visualTransformModalOverlay.style.display = 'none';
+                document.getElementById('transform-controls-section').classList.remove('hidden');
+                document.getElementById('visual-transformed-result-section').classList.add('hidden');
+                if (ctx) {
+                    ctx.clearRect(0, 0, canvas.width, canvas.height);
+                }
+                if (canvas) {
+                    canvas.removeEventListener('mousedown', canvasMouseDown);
+                    canvas.removeEventListener('mousemove', canvasMouseMove);
+                    canvas.removeEventListener('mouseup', canvasMouseUp);
+                    canvas.style.cursor = 'default';
+                    canvas.style.filter = '';
+                }
+                canvas = null;
+                ctx = null;
+                originalImage = new Image();
+                currentTransformImageId = null;
+                currentCrop = { x: 0, y: 0, width: 0, height: 0 };
+                currentRotation = 0;
+                document.getElementById('visualSaturation').value = 1;
+                document.getElementById('saturationValue').textContent = '1.00';
+                document.getElementById('visualBrightness').value = 1;
+                document.getElementById('brightnessValue').textContent = '1.00';
+                document.getElementById('visualContrast').value = 1;
+                document.getElementById('contrastValue').textContent = '1.00';
+            }, 300);
+        }
+
+        document.getElementById('visualRotateDegrees').addEventListener('input', (e) => {
+            currentRotation = parseFloat(e.target.value);
+            document.getElementById('rotateDegreeValue').textContent = `${currentRotation}°`;
+            drawCanvas();
+        });
+
+        document.getElementById('visualCropX').addEventListener('input', (e) => {
+            currentCrop.x = parseInt(e.target.value) || 0;
+            drawCanvas();
+        });
+        document.getElementById('visualCropY').addEventListener('input', (e) => {
+            currentCrop.y = parseInt(e.target.value) || 0;
+            drawCanvas();
+        });
+        document.getElementById('visualCropWidth').addEventListener('input', (e) => {
+            currentCrop.width = parseInt(e.target.value) || 0;
+            drawCanvas();
+        });
+        document.getElementById('visualCropHeight').addEventListener('input', (e) => {
+            currentCrop.height = parseInt(e.target.value) || 0;
+            drawCanvas();
+        });
+
+        document.getElementById('visualSaturation').addEventListener('input', (e) => {
+            document.getElementById('saturationValue').textContent = parseFloat(e.target.value).toFixed(2);
+            drawCanvas();
+        });
+        document.getElementById('visualBrightness').addEventListener('input', (e) => {
+            document.getElementById('brightnessValue').textContent = parseFloat(e.target.value).toFixed(2);
+            drawCanvas();
+        });
+        document.getElementById('visualContrast').addEventListener('input', (e) => {
+            document.getElementById('contrastValue').textContent = parseFloat(e.target.value).toFixed(2);
+            drawCanvas();
+        });
+
+        async function handleMetadataDeletion(imageId) {
+            if (!loggedInUserIsTestUser) {
+                showMessage('Feature still in production.', 'error');
+                return;
+            }
+            closeAllImageMenus();
+            showConfirmationModal('Are you sure you want to delete metadata from this image? This will modify the original file in place.', async (confirmed) => {
+                if (confirmed) {
+                    try {
+                        const response = await fetch(`${window.location.origin}/delete_image_metadata`, {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ imageId })
+                        });
+                        const data = await response.json();
+                        if (data.success) {
+                            showMessage(data.message, 'success');
+                            loadGalleryImages();
+                        } else {
+                            showMessage(data.message, 'error');
+                        }
+                    } catch (error) {
+                        console.error('Error deleting image metadata:', error);
+                        showMessage('An unexpected error occurred during metadata deletion.', 'error');
+                    }
+                } else {
+                    showMessage('Metadata deletion cancelled.', 'info');
+                }
+            }, 'Delete', 'Cancel', 'delete');
+        }
+
+        function setUploadMode(mode) {
+            currentUploadMode = mode;
+            const fileSection = document.getElementById('file-upload-section');
+            const urlSection = document.getElementById('url-upload-section');
+            const fileBtn = document.getElementById('upload-mode-file-btn');
+            const urlBtn = document.getElementById('upload-mode-url-btn');
+
+            const localImageFile = document.getElementById('localImageFile');
+            const uploadImageUrl = document.getElementById('uploadImageUrl');
+
+            if (mode === 'file') {
+                fileSection.style.display = 'block';
+                urlSection.style.display = 'none';
+                fileBtn.classList.add('bg-blue-600', 'text-white', 'shadow-md');
+                fileBtn.classList.remove('text-gray-700', 'bg-gray-200', 'hover:bg-gray-300');
+                urlBtn.classList.remove('bg-blue-600', 'text-white', 'shadow-md');
+                urlBtn.classList.add('text-gray-700', 'bg-gray-200', 'hover:bg-gray-300');
+
+                localImageFile.setAttribute('required', 'true');
+                uploadImageUrl.removeAttribute('required');
+                localImageFile.value = '';
+                uploadImageUrl.value = '';
+            } else {
+                fileSection.style.display = 'none';
+                urlSection.style.display = 'block';
+                urlBtn.classList.add('bg-blue-600', 'text-white', 'shadow-md');
+                urlBtn.classList.remove('text-gray-700', 'bg-gray-200', 'hover:bg-gray-300');
+                fileBtn.classList.remove('bg-blue-600', 'text-white', 'shadow-md');
+                fileBtn.classList.add('text-gray-700', 'bg-gray-200', 'hover:bg-gray-300');
+
+                uploadImageUrl.setAttribute('required', 'true');
+                localImageFile.removeAttribute('required');
+                localImageFile.value = '';
+                uploadImageUrl.value = '';
+            }
+        }
+
+        async function uploadImage(event) {
+            event.preventDefault();
+            const title = DOMPurify.sanitize(document.getElementById('imageTitle').value.trim());
+            const description = DOMPurify.sanitize(document.getElementById('imageDescription').value);
+            const group_name = DOMPurify.sanitize(document.getElementById('imageGroup').value);
+
+            const formData = new FormData();
+            formData.append('title', title);
+            formData.append('description', description);
+            formData.append('group_name', group_name);
+
+            let endpoint = '';
+
+            if (currentUploadMode === 'file') {
+                const fileInput = document.getElementById('localImageFile');
+                if (!fileInput.files || fileInput.files.length === 0) {
+                    showMessage('Please select an image file.', 'error');
+                    return;
+                }
+                formData.append('file', fileInput.files[0]);
+                endpoint = '/upload_image';
+            } else {
+                const imageUrl = DOMPurify.sanitize(document.getElementById('uploadImageUrl').value.trim());
+                if (!imageUrl) {
+                    showMessage('Please provide an image URL.', 'error');
+                    return;
+                }
+                const jsonPayload = {
+                    imageUrl: imageUrl,
+                    title: title,
+                    description: description,
+                    group_name: group_name
+                };
+                endpoint = '/upload_image_url';
+
+                try {
+                    const response = await fetch(`${window.location.origin}${endpoint}`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(jsonPayload)
+                    });
+                    const data = await response.json();
+                    if (data.success) {
+                        showMessage(data.message, 'success');
+                        document.getElementById('uploadForm').reset();
+                        setUploadMode('file');
+                        navigateTo('gallery');
+                    } else {
+                        showMessage(data.message, 'error');
+                    }
+                } catch (error) {
+                    console.error('Upload image error:', error);
+                    showMessage('An unexpected error occurred during image upload.', 'error');
+                }
+                return;
+            }
+
+            try {
+                const response = await fetch(`${window.location.origin}${endpoint}`, {
+                    method: 'POST',
+                    body: formData
+                });
+                const data = await response.json();
+                if (data.success) {
+                    showMessage(data.message, 'success');
+                    document.getElementById('uploadForm').reset();
+                    setUploadMode('file');
+                    navigateTo('gallery');
+                } else {
+                    showMessage(data.message, 'error');
+                }
+            } catch (error) {
+                console.error('Upload image error:', error);
+                showMessage('An unexpected error occurred during image upload.', 'error');
+            }
+        }
+
+        async function submitBugReport(event) {
+            event.preventDefault();
+            const bugName = document.getElementById('bugName').value.trim();
+            const bugDetails = document.getElementById('bugDetails').value.trim();
+
+            try {
+                const response = await fetch(`${window.location.origin}/report_bug`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ bugName, bugDetails })
+                });
+                const data = await response.json();
+                if (data.success) {
+                    showMessage(data.message, 'success');
+                    document.getElementById('bugReportForm').reset();
+                    navigateTo('gallery');
+                } else {
+                    showMessage(data.message, 'error');
+                }
+            } catch (error) {
+                console.error('Bug report submission error:', error);
+                showMessage('An unexpected error occurred during bug report submission.', 'error');
+            }
+        }
+
+        async function loadBugReports() {
+            const bugReportsList = document.getElementById('bug-reports-list');
+            const noBugReports = document.getElementById('no-bug-reports');
+
+            if (!bugReportsList || !noBugReports) {
+                console.error("Error: Admin panel bug report elements not found.");
+                return;
+            }
+
+            bugReportsList.innerHTML = '';
+            noBugReports.style.display = 'none';
+
+            try {
+                const response = await fetch(`${window.location.origin}/admin/bug_reports`);
+                const data = await response.json();
+
+                if (data.success) {
+                    if (data.bug_reports.length === 0) {
+                        noBugReports.style.display = 'block';
+                    } else {
+                        data.bug_reports.forEach(report => {
+                            const reportCard = document.createElement('div');
+                            reportCard.className = 'bg-white p-6 rounded-xl shadow-md border-l-4 border-purple-500 flex justify-between items-center';
+                            
+                            reportCard.innerHTML = `
+                                <div>
+                                    <p class="text-sm text-gray-500 mb-2">Report ID: ${DOMPurify.sanitize(report.id)}</p>
+                                    <p class="text-sm text-gray-500 mb-2">Submitted by: ${DOMPurify.sanitize(report.reporter)} (ID: ${DOMPurify.sanitize(report.reporterDisplayId)}) on ${new Date(report.timestamp).toLocaleString()}</p>
+                                    <h3 class="text-xl font-semibold text-gray-800 mb-3">Bug Name: ${DOMPurify.sanitize(report.name)}</h3>
+                                    <h3 class="text-xl font-semibold text-gray-800 mb-3">Bug Details:</h3>
+                                    <div class="bg-gray-100 p-4 rounded-lg overflow-auto max-h-48 text-gray-700 break-words">
+                                        ${report.details}
+                                    </div>
+                                </div>
+                                <button onclick="showDeleteBugReportConfirmation('${DOMPurify.sanitize(report.id)}')" class="bg-red-500 hover:bg-red-600 text-white font-bold py-2 px-4 rounded-lg shadow-md transition duration-200 ml-4">
+                                    Delete
+                                </button>
+                            `;
+                            bugReportsList.appendChild(reportCard);
+                        });
+                    }
+                } else {
+                    showMessage(data.message, 'error');
+                }
+            } catch (error) {
+                console.error('Error loading bug reports:', error);
+                showMessage('Failed to load bug reports. Please try again later.', 'error');
+            }
+        }
+
+        function showDeleteBugReportConfirmation(reportId) {
+            showConfirmationModal('Are you sure you want to delete this bug report? This action cannot be undone.', async (confirmed) => {
+                if (confirmed) {
+                    await deleteBugReport(reportId);
+                } else {
+                    showMessage('Bug report deletion cancelled.', 'info');
+                }
+            }, 'Delete', 'Cancel', 'delete');
+        }
+
+        async function deleteBugReport(reportIdToDelete) {
+            try {
+                const response = await fetch(`${window.location.origin}/admin/delete_bug_report`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ reportId: reportIdToDelete })
+                });
+                const data = await response.json();
+                if (data.success) {
+                    showMessage(data.message, 'success');
+                    loadBugReports();
+                } else {
+                    showMessage(data.message, 'error');
+                }
+            } catch (error) {
+                console.error('Delete bug report error:', error);
+                showMessage('An unexpected error occurred during bug report deletion.', 'error');
+            }
+        }
+
+        async function loadUsersForAdminPanelDisplay(users) {
+            const userListDiv = document.getElementById('user-list');
+            const noUsersMessage = document.getElementById('no-users');
+
+            if (!userListDiv || !noUsersMessage) {
+                console.error("Error: Admin panel user list elements not found.");
+                return;
+            }
+
+            userListDiv.innerHTML = '';
+            noUsersMessage.style.display = 'none';
+
+            if (users.length === 0) {
+                noUsersMessage.style.display = 'block';
+            } else {
+                users.forEach(user => {
+                    const userCard = document.createElement('div');
+                    userCard.className = 'bg-white p-4 rounded-xl shadow-md flex justify-between items-center';
+                    userCard.innerHTML = `
+                        <div>
+                            <p class="font-semibold text-gray-800">Email ID: ${DOMPurify.sanitize(user.username)} ${user.isAdmin ? '(Admin)' : ''}</p>
+                            <p class="text-sm text-gray-600">ID: ${DOMPurify.sanitize(user.displayId)}</p>
+                        </div>
+                        <div class="flex space-x-2">
+                            <button onclick="handleDownloadUserLog('${DOMPurify.sanitize(user.username)}')" class="bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 px-4 rounded-lg shadow-md transition duration-200">
+                                Download Log
+                            </button>
+                            ${user.isAdmin && users.filter(u => u.isAdmin).length === 1 ?
+                                `<span class="text-gray-400 text-sm">Admin User</span>` :
+                                `<button onclick="showDeleteUserConfirmation('${DOMPurify.sanitize(user.username)}')" class="bg-red-500 hover:bg-red-600 text-white font-bold py-2 px-4 rounded-lg shadow-md transition duration-200">
+                                    Delete User
+                                </button>`
+                            }
+                        </div>
+                    `;
+                    userListDiv.appendChild(userCard);
+                });
+            }
+        }
+
+        function handleDownloadUserLog(username) {
+            const logIdentifier = username;
+            const logType = 'user';
+            window.location.href = `/admin/get_system_log?log_identifier=${encodeURIComponent(logIdentifier)}.log`;
+        }
+
+        function showDeleteUserConfirmation(username) {
+            showConfirmationModal(`Are you sure you want to delete user "${DOMPurify.sanitize(username)}"? This action cannot be undone.`, async (confirmed) => {
+                if (confirmed) {
+                    await deleteUser(username);
+                } else {
+                    showMessage('User deletion cancelled.', 'info');
+                }
+            }, 'Delete', 'Cancel', 'delete');
+        }
+
+        async function deleteUser(usernameToDelete) {
+            try {
+                const response = await fetch(`${window.location.origin}/admin/delete_user`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ username: usernameToDelete })
+                });
+                const data = await response.json();
+                if (data.success) {
+                    showMessage(data.message, 'success');
+                    if (loggedInEmail === usernameToDelete) {
+                        await logoutUser();
+                    } else {
+                        loadAdminPanelContent();
+                    }
+                } else {
+                    showMessage(data.message, 'error');
+                }
+            } catch (error) {
+                console.error('Delete user error:', error);
+                showMessage('An unexpected error occurred during user deletion.', 'error');
+            }
+        }
+
+        async function loadAdminPanelContent() {
+            const adminNotLoggedIn = document.getElementById('admin-not-logged-in');
+            const adminContentWrapper = document.getElementById('admin-content-wrapper');
+            const noAdminUserMessage = document.getElementById('no-admin-user-message');
+            const testFeaturesSection = document.getElementById('test-features-section');
+
+
+            const authStatus = await checkAuthStatus();
+            if (!authStatus.loggedIn || !authStatus.isAdmin) {
+                adminNotLoggedIn.style.display = 'block';
+                adminContentWrapper.style.display = 'none';
+                if (noAdminUserMessage) noAdminUserMessage.style.display = 'none';
+                return;
+            } else {
+                adminNotLoggedIn.style.display = 'none';
+                adminContentWrapper.style.display = 'block';
+            }
+
+            try {
+                const response = await fetch(`${window.location.origin}/admin/users`);
+                const data = await response.json();
+
+                if (data.success) {
+                    if (!data.anyAdminExists) {
+                        if (noAdminUserMessage) noAdminUserMessage.style.display = 'block';
+                        document.getElementById('user-list').innerHTML = '';
+                        document.getElementById('no-users').style.display = 'none';
+                    } else {
+                        if (noAdminUserMessage) noAdminUserMessage.style.display = 'none';
+                        loadUsersForAdminPanelDisplay(data.users);
+                        loadBugReports();
+                    }
+                    
+                    testFeaturesSection.style.display = 'none';
+
+                } else {
+                    showMessage(data.message, 'error');
+                    if (noAdminUserMessage) noAdminUserMessage.style.display = 'none';
+                }
+            } catch (error) {
+                console.error('Error loading admin panel content:', error);
+                showMessage('Failed to load admin panel content. Please try again later.', 'error');
+                if (noAdminUserMessage) noAdminUserMessage.style.display = 'none';
+            }
+        }
+
+        function togglePasswordVisibility(passwordInputId) {
+            const passwordInput = document.getElementById(passwordInputId);
+            const eyeOpenPath = document.getElementById(`${passwordInputId}EyeOpen`);
+            const eyeClosedPath = document.getElementById(`${passwordInputId}EyeClosed`);
+
+            if (passwordInput && eyeOpenPath && eyeClosedPath) {
+                if (passwordInput.type === 'password') {
+                    passwordInput.type = 'text';
+                    eyeOpenPath.style.display = 'block';
+                    eyeClosedPath.style.display = 'none';
+                } else {
+                    passwordInput.type = 'password';
+                    eyeOpenPath.style.display = 'none';
+                    eyeClosedPath.style.display = 'block';
+                }
+            }
+        }
+
+
+        async function populateImageGroupDropdown() {
+            const imageGroupSelect = document.getElementById('imageGroup');
+            const targetGroupSelect = document.getElementById('targetGroupSelect');
+            const imagesForGroupingDiv = document.getElementById('imagesForGrouping');
+
+            if (!imageGroupSelect || !targetGroupSelect || !imagesForGroupingDiv) {
+                console.error("Group management elements not found.");
+                return;
+            }
+
+            imageGroupSelect.innerHTML = '';
+            targetGroupSelect.innerHTML = '';
+            imagesForGroupingDiv.innerHTML = '';
+
+            try {
+                const response = await fetch(`${window.location.origin}/get_image_collections`);
+                const data = await response.json();
+
+                if (data.success) {
+                    allImageCollections = data.collections;
+                    data.collections.forEach(collection => {
+                        const option1 = document.createElement('option');
+                        option1.value = collection.name;
+                        option1.textContent = collection.name;
+                        imageGroupSelect.appendChild(option1);
+
+                        const option2 = document.createElement('option');
+                        option2.value = collection.name;
+                        option2.textContent = collection.name;
+                        targetGroupSelect.appendChild(option2);
+                    });
+
+                    currentImages.forEach(image => {
+                        const checkboxDiv = document.createElement('div');
+                        checkboxDiv.className = 'flex items-center space-x-2';
+                        checkboxDiv.innerHTML = `
+                            <input type="checkbox" id="img-group-${DOMPurify.sanitize(image.id)}" value="${DOMPurify.sanitize(image.id)}" class="form-checkbox h-4 w-4 text-blue-600">
+                            <label for="img-group-${DOMPurify.sanitize(image.id)}" class="text-gray-700 text-sm">${DOMPurify.sanitize(image.title)}</label>
+                        `;
+                        imagesForGroupingDiv.appendChild(checkboxDiv);
+                    });
+
+                } else {
+                    showMessage(data.message, 'error');
+                }
+            } catch (error) {
+                console.error('Error loading image collections:', error);
+                showMessage('Failed to load image collections.', 'error');
+            }
+        }
+
+        async function createNewGroup() {
+            const newGroupNameInput = document.getElementById('newGroupNameInput');
+            const newGroupName = DOMPurify.sanitize(newGroupNameInput.value.trim());
+
+            if (!newGroupName) {
+                showMessage('New group name cannot be empty.', 'error');
+                return;
+            }
+
+            try {
+                const response = await fetch(`${window.location.origin}/create_image_collection`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ collectionName: newGroupName })
+                });
+                const data = await response.json();
+                if (data.success) {
+                    showMessage(data.message, 'success');
+                    newGroupNameInput.value = '';
+                    newGroupNameInput.style.display = 'none';
+                    document.getElementById('saveNewGroupBtn').style.display = 'none';
+                    populateImageGroupDropdown();
+                } else {
+                    showMessage(data.message, 'error');
+                }
+            } catch (error) {
+                console.error('Error creating new group:', error);
+                showMessage('An unexpected error occurred while creating the new group.', 'error');
+            }
+        }
+
+        async function moveSelectedImagesToGroup() {
+            const targetCollectionName = DOMPurify.sanitize(document.getElementById('targetGroupSelect').value);
+            const selectedImageIds = Array.from(document.querySelectorAll('#imagesForGrouping input[type="checkbox"]:checked'))
+                                        .map(checkbox => checkbox.value);
+
+            if (selectedImageIds.length === 0) {
+                showMessage('Please select at least one image to move.', 'error');
+                return;
+            }
+            if (!targetCollectionName) {
+                showMessage('Please select a target group.', 'error');
+                return;
+            }
+
+            try {
+                const response = await fetch(`${window.location.origin}/move_images_to_collection`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ imageIds: selectedImageIds, targetCollectionName: targetCollectionName })
+                });
+                const data = await response.json();
+                if (data.success) {
+                    showMessage(data.message, 'success');
+                    hideManageGroupsModal();
+                    loadGalleryImages();
+                } else {
+                    showMessage(data.message, 'error');
+                }
+            } catch (error) {
+                console.error('Error moving images:', error);
+                showMessage('An unexpected error occurred while moving images.', 'error');
+            }
+        }
+
+        function showManageGroupsModal() {
+            if (!loggedInUserIsTestUser) {
+                showMessage('Feature still in production.', 'error');
+                return;
+            }
+            closeAllImageMenus();
+            populateImageGroupDropdown();
+            const manageGroupsModalOverlay = document.getElementById('manage-groups-modal-overlay');
+            manageGroupsModalOverlay.style.display = 'flex';
+            manageGroupsModalOverlay.classList.add('open');
+        }
+
+        function hideManageGroupsModal() {
+            const manageGroupsModalOverlay = document.getElementById('manage-groups-modal-overlay');
+            manageGroupsModalOverlay.classList.remove('open');
+            setTimeout(() => {
+                manageGroupsModalOverlay.style.display = 'none';
+            }, 300);
+        }
+
+        document.addEventListener('DOMContentLoaded', async () => {
+            document.getElementById('current-year').textContent = new Date().getFullYear();
+
+            const lastVisitedPage = localStorage.getItem('lastVisitedPage') || 'home';
+            await navigateTo(lastVisitedPage);
+
+            document.addEventListener('visibilitychange', async () => {
+                if (document.visibilityState === 'visible') {
+                    console.log('Tab became visible, re-checking auth status...');
+                    
+                    const authStatus = await checkAuthStatus();
+                    
+                    if (currentPage === 'adminPanel' && (!authStatus.loggedIn || !authStatus.isAdmin)) {
+                        showMessage('Your admin session has expired or been revoked. Please log in again.', 'error');
+                        navigateTo('login');
+                    }
+                }
+            });
+
+            document.querySelectorAll('#navbar-links button.nav-link').forEach(button => {
+                button.addEventListener('click', (e) => {
+                    navigateTo(e.target.dataset.page);
+                });
+            });
+
+            document.getElementById('nav-logout').addEventListener('click', logoutUser);
+
+            document.getElementById('registerForm').addEventListener('submit', registerUser);
+            document.getElementById('loginForm').addEventListener('submit', loginUser);
+            document.getElementById('uploadForm').addEventListener('submit', uploadImage);
+            document.getElementById('bugReportForm').addEventListener('submit', submitBugReport);
+
+            document.getElementById('upload-mode-file-btn').addEventListener('click', () => setUploadMode('file'));
+            document.getElementById('upload-mode-url-btn').addEventListener('click', () => setUploadMode('url'));
+
+            document.getElementById('addNewGroupBtn').addEventListener('click', () => {
+                document.getElementById('newGroupNameInput').style.display = 'block';
+                document.getElementById('saveNewGroupBtn').style.display = 'inline-block';
+            });
+            document.getElementById('saveNewGroupBtn').addEventListener('click', createNewGroup);
+            document.getElementById('manageGroupsBtnGallery').addEventListener('click', showManageGroupsModal);
+            document.getElementById('createGroupBtn').addEventListener('click', createNewGroup);
+            document.getElementById('moveImagesBtn').addEventListener('click', moveSelectedImagesToGroup);
+            document.getElementById('cancelManageGroupsBtn').addEventListener('click', hideManageGroupsModal);
+
+
+            document.getElementById('saveEditBtn').addEventListener('click', editImageDetails);
+            document.getElementById('cancelEditBtn').addEventListener('click', hideEditModal);
+
+            document.getElementById('executeConversionBtn').addEventListener('click', executeConversion);
+            document.getElementById('cancelConversionBtn').addEventListener('click', hideConversionModal);
+            document.getElementById('closeConvertedModalBtn').addEventListener('click', hideConversionModal);
+
+            document.getElementById('executeVisualTransformBtn').addEventListener('click', executeVisualTransform);
+            document.getElementById('cancelVisualTransformBtn').addEventListener('click', hideVisualTransformModal);
+            document.getElementById('closeTransformedModalBtn').addEventListener('click', hideVisualTransformModal);
+            document.getElementById('visualTransformOperation').addEventListener('change', updateVisualTransformParamsVisibility);
+
+
+            const modalOverlays = document.querySelectorAll('.modal-overlay');
+            modalOverlays.forEach(overlay => {
+                overlay.addEventListener('click', (event) => {
+                    if (event.target === overlay) {
+                        if (overlay.id === 'confirmation-modal-overlay') {
+                            hideConfirmationModal();
+                        } else if (overlay.id === 'conversion-modal-overlay') {
+                            hideConversionModal();
+                        } else if (overlay.id === 'edit-modal-overlay') {
+                            hideEditModal();
+                        } else if (overlay.id === 'transform-visual-modal-overlay') {
+                            hideVisualTransformModal();
+                        } else if (overlay.id === 'manage-groups-modal-overlay') {
+                            hideManageGroupsModal();
+                        }
+                    }
+                });
+            });
+        });
+
+        window.navigateTo = navigateTo;
+        window.toggleImageMenu = toggleImageMenu;
+        window.showDeleteConfirmation = showDeleteConfirmation;
+        window.handleEditImage = handleEditImage;
+        window.handleConvertImage = handleConvertImage;
+        window.handleVisualTransformImage = handleVisualTransformImage;
+        window.handleMetadataDeletion = handleMetadataDeletion;
+        window.showDeleteUserConfirmation = showDeleteUserConfirmation;
+        window.showDeleteBugReportConfirmation = showDeleteBugReportConfirmation;
+        window.togglePasswordVisibility = togglePasswordVisibility;
+        window.toggleAccordion = toggleAccordion;
+    </script>
+</body>
+</html>
