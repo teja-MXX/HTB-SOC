@@ -70,6 +70,7 @@ Port 22/SSH and Port 8000/HTTP Flask Server
 
 [22:43:36] Okay back from break and starting again now huhh.
 [22:44:12] Googling for Python version vulns 3.12.7 . Nothing I could found ----------------- CHECK AGAIN
+
 [22:49:46] Since the server is flask . maybe it is vulnerable to Jinja exploits
 [22:50:40] Drank coffee break 
 [22:59:56] BACK FROM BREAKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKK
