@@ -76,35 +76,62 @@ Port 22/SSH and Port 8000/HTTP Flask Server
 [22:59:56] BACK FROM BREAKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKK
 
 [23:00:12] Lets try this jinja DTL in Burp . Didn't work .
+
 [23:08:50] Tried from Burp and this isn't working
+
 [23:17:42]  Found a blog on how flask is vuln to SSRF . Lets try that . I'll start my python webserver and see if the HTTP requests pings the server . 
+
 [23:20:13] Nope that doesn't work at all
+
 [23:22:39] Lets google if there are any file upload vulnerabilities for this python or flask server version
+
 [23:24:06] Nope nothing found . Maybe an UDP scan works . Lets rustscan it 
+
 [23:32:30] Uploaded file with this file name - ./../../../../../../../../../../../../../etc/Batman.jpg
+
 [23:32:46] Lets see if this works . And the URL it generated is http://10.10.11.88:8000/uploads/f7f9490a-ea98-4459-b76a-7fd178df087c_etc_Batman.jpg
+
 [23:35:12] So it is sanitizing the URLs . What to do ????
+
 [23:35:51] Lets visit admin users and see what we get . 
+
 [23:36:36] This is what we get . 
 	message	"Access denied. Administrator privileges required."
 	success	false
+
 [23:36:46] Can we tamper cookies without the secret key ??
 [23:37:51] Debbuger and console endpoint also no luck
+
 [23:39:15] Tried LFI again with view image . Nope
+
 [23:40:50] I have a view page source code of register functionality , but it is strange. 
+
 [23:43:12] Nope , nothing flaw
+
 [23:47:39] Checking the same for login too 
+
 [23:49:44] Checking if we can access admin endpoint
+
 [23:52:09] Lets send isAdmnin true with login to see what we get. 
+
 [23:58:39] Nope , nothing we got from setting isAdmin = true in the login payload
+
 [23:59:11] Maybe in register endpoint ??
+
 [00:00:02] It was successful sending isAdmin true in register . Lets login and see what we get 
+
 [00:03:40] Regular homescreen , but when I navigate to /admin/users , same access denied message
+
 [00:08:22] Lets see file upload in view page source . Nope
+
 [00:20:11] Did flask-unsign decode , and now trying if I can modify params of decoded cookie and send request to get admin access
+
 [00:22:46] Nope thats not possible but it was worth a try. 
+
 [00:22:58] Seeing if we can do subdomain host in URL
+
 [00:27:08] Oh theere is a bug report link which I've missed
+
 
 
 ```html
