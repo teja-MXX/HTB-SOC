@@ -142,19 +142,24 @@ Port 22/SSH and Port 8000/HTTP Flask Server
 
 
 [00:48:28] The above fetched me cookie in base64 and I've decoded and navigated to /admin/users . And this is what I got
-
 {"anyAdminExists":true,"success":true,"users":[{"displayId":"a1b2c3d4","isAdmin":true,"isTestuser":false,"username":"admin@imagery.htb"},{"displayId":"e5f6g7h8","isAdmin":false,"isTestuser":true,"username":"testuser@imagery.htb"}]}
 
 [00:49:44] And there is a admin panel
+
 [00:50:41] And we can do ffuf with this admin account session for dirbusting
+
 [00:52:01] Lets take a break and start tomorrow 
 
 
 -------------------- 03-OCTOBER-2025 -------------------------------
 [09:26:28] Okay you'll get bug report XSS callback when you upload an image . Huhh 
+
 [09:34:50] Lets revisit the dir bustinng ouput to see what endpoints we can visit as admin .
+
 [09:37:57] Running ffuf with new wordlist with admin session and visited the debug and console endpoints . But NOPE
+
 [09:39:37] Lets see what download log button gives out
+
 [09:40:35] Okay we have LFI from the get_system_log endpoint
 	- http://10.10.11.88:8000/admin/get_system_log?log_identifier=/../../../../../../../../../etc/passwd
 
@@ -168,6 +173,7 @@ Port 22/SSH and Port 8000/HTTP Flask Server
 	127.0.0.1 Imagery imagery.htb
 
 [09:44:11] Maybe there is a folder in /var/www called imagery.htb ??
+
 [09:44:37] And lets look at flask dir structure to see what we can get interestingly
 
 	my-flask-app/
@@ -195,8 +201,10 @@ Port 22/SSH and Port 8000/HTTP Flask Server
 	└── venv/
 
 [09:45:40] Maybe we can get .flaskenv if we get the root dir right. Tried but didn't
+
 [09:48:00] But I got app.py
 	- `http://10.10.11.88:8000/admin/get_system_log?log_identifier=../app.py`
+
 
 [09:49:30] NOthing fancy from app.py . Downloaded config.py
 	- We get this DATA_STORE_PATH = 'db.json'
@@ -209,20 +217,27 @@ Port 22/SSH and Port 8000/HTTP Flask Server
     "password": "2c65c8d7bfbca32a3ed42596192384f6",
 
 [09:52:46] Lets crack them . 
+
 [09:55:33] And we got testuser@imagery.htb as iambatman
+
 [09:55:48] Maybe the creator is a batman fan just like me . I was also uploading batman images xD
+
 [09:56:18] Okay lets use this password for found linux account via SSH
 	└─$ ssh web@10.10.11.88
 	web@10.10.11.88: Permission denied (publickey).
 
 [09:59:15] Maybe no access via password. Need public key I guess
+
 [09:59:32] Lets login as the testuser and see what did he upload
+
 [10:01:41] He didnt upload anything , but he can create groups . If I can point that group uploads to root dir , I can run a python reverse shell and get it maybe
 
 [10:02:20] Taking BREAKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKK
 
 [10:11:21] Back from break . Lets explore this account and see
+
 [10:13:09] Creating groups is not possible , it is saying GroupName cannot be empty even when provided. Lets see what it the source code for this. View Page Source.
+
 [10:14:58] Nothing I can find. Lets see app.py again and understand its functionality. Maybe there is a code injection ??
 
 [10:18:11] There are registered blueprints in app.py ------------------------ CHECK THIS
@@ -245,15 +260,21 @@ Port 22/SSH and Port 8000/HTTP Flask Server
 [10:26:30] Couldn't find keys private keys
 
 [10:31:04] The X-Bypass-Lockout header is used for rate limiting . If it is not given , account lockout is possible . 
+
 [10:32:02] So the Header expects CRON_BYPASS_TOKEN env var as value , but since there is no such env var from earlier checking environ file , we can use default-secret-token-for-dev to bypass lockout 
 
 [10:32:55] But what can we do with it ? Bruteforce . But what ????? 
+
 [10:33:08] We can bruteforce SECRET_KEY as it randomly generated , but it is only good for session keys . But how do we get RCE from it ???
 
 [10:38:19] Checking blueprints , like what can we do with it
+
 [10:39:02] Maybe they are present inside routes folder . Lets see . Nope no routes folder I guess
+
 [10:43:07] From ffuf dir busting I can see there is a utils.py file
+
 [10:46:33] Just how the app is configured in backend . Nothing useful I believe
+
 [10:53:22] Shit in app.py , the packages imported are files actually . So we have the below files
 	api_auth.py
 	api_upload.py
@@ -263,6 +284,7 @@ Port 22/SSH and Port 8000/HTTP Flask Server
 	api_misc.py
 
 [10:55:10] Lets download them
+
 [10:57:22] BREAKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKkk
 
 [12:08:27] Back from the break
@@ -282,6 +304,7 @@ Port 22/SSH and Port 8000/HTTP Flask Server
 	- And extension should be in allowed list
 
 [12:29:23] We have to modify the extension some how to allow command injection
+
 [12:30:46] Or there is a params dict in payload "x" and "y" "width" and "height"
 
 [12:31:47] Lets send the request , we can upload file and get its ID by dumping db.json file
@@ -303,9 +326,13 @@ Port 22/SSH and Port 8000/HTTP Flask Server
 [13:02:35] And we got the reverseShell of web account
 
 [13:04:01] Now lets do some recon
+
 [13:09:08] There is a backup folder inside /var/
+
 [13:09:22] Lets dump it locally and see what it is
+
 [13:23:33] It is encrypted . How to unzip it . 
+
 [13:23:41] And I got this 
 	PASSWORD = "strongsandofbeach"
 	BYPASS_TOKEN = "K7Zg9vB$24NmW!q8xR0p%tL!"
@@ -314,6 +341,7 @@ Port 22/SSH and Port 8000/HTTP Flask Server
 [13:43:56] Lets wait and crack it using bruteforce . Until then BREAKKKKKKKKKKKKKKKKKk
 
 [14:13:08] Cracked the file password - bestfriends
+
 [14:18:13] We need this pip3 install pyAesCrypt to decrypt the file
 
 [14:20:17] Decypted and read db.json file and it has this 
@@ -328,13 +356,16 @@ Port 22/SSH and Port 8000/HTTP Flask Server
 which is no password mode . And have to restart the application now
 
 [14:27:48] Lets See how . 
+
 [14:30:38] Ran the same charcol command and I was able to reset to no password and get shell
 
 [14:30:55] Now figuring out how to get rootshell
+
 [14:34:33] We can backup files , as we run this as root , so the files will also be as root . Then we can extract the files 
 In this backup file , we need to place a suid rootshell .
 
 [14:35:14] Lets write a C code to get that . 
+
 [14:39:31] Nope that maynot be possible , as we are backing up and not running . Maybe we can dump root dir and get shell if it has private SSH keys . huhh
 
 [14:40:05] Lets do that. So created a tmp folder , /tmp/r3b00t and the backup will be placed there and will be extracted there
@@ -344,8 +375,11 @@ In this backup file , we need to place a suid rootshell .
 sudo $charcol backup -i /root/ -o /tmp/r3b00t/backup --no-timestamp --name rootDump
 
 [14:59:11] Added the cronjob , lets wait for a min and see if it dumps the root dir in the backup
+
 [15:00:33] the dir has a file , but not sure if it is cron generated . Deleted that and lets wait for a min to see if it generates again
+
 [15:01:22] Nope cant see the file now
+
 [15:01:52] And the job is also delted . Lets add again
 	- auto add --schedule "* * * * *" --command "charcol backup -i /root/ -o /tmp/r3b00t/backup --no-timestamp" --name "rootDump"
 
@@ -376,13 +410,18 @@ sudo $charcol backup -i /root/ -o /tmp/r3b00t/backup --no-timestamp --name rootD
 
 
 [15:08:46] Lets see about the cleaning archive file ,
+
 [15:09:46] There is no such option for archive cleanup . Lets add password now this time and see and remove the timestamp arg too
 	- auto add --schedule "* * * * *" --command "charcol backup -i /root/ -o /tmp/r3b00t/backup -p haha" --name "rootDump" --log-output /tmp/r3b00t/backup.log
 
 [15:10:54] Lets see what happens this time. 
+
 [15:11:11] Okay there is a backup file now . So we should add password . Huhh
+
 [15:11:27] Lets dump it locally and extract . 
+
 [15:12:51] Nope it shows empty . Lets extract it from the charcol application itself. 
+
 [15:17:43] Nope that shows empty
 
 [15:17:48] Lets edit the cron job 
@@ -398,11 +437,13 @@ sudo $charcol backup -i /root/ -o /tmp/r3b00t/backup --no-timestamp --name rootD
 	- auto add --schedule "* * * * *" --command "charcol backup -i /tmp/r3b00t/bash -o /tmp/r3b00t/rshell -p haha --no-timestamp" --name "binBashBkp"  --log-output /tmp/r3b00t/backup.log
 
 [15:40:15] Added this one , lets see what happens . 
+
 [15:41:52] Yeah now I can see bash file when listing . Lets extract it
 
 auto edit 8a47f12b-48da-4828-a0ac-3b81e2468bb4 --schedule "* * * * *" --command "charcol backup -i /tmp/r3b00t/bash -o /tmp/r3b00t/rshell2 -p haha --no-timestamp" --name "binBashBkp2"  --log-output /tmp/r3b00t/backup.log
 
 [15:52:55] Lets see what can we do 
+
 [15:59:01] Lets see if we can add regular bash commands
 	auto add --schedule "* * * * *" --command "cp /bin/bash /tmp/r3b00t/rootShell3; chmod u+s /tmp/r3b00t/rootShell3" --name "binBashBkp3"  --log-output /tmp/r3b00t/backup.log
 
