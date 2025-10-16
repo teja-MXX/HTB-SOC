@@ -1,5 +1,5 @@
 
-# REDACTEDery HTB Writeup (Live Logging Style)
+# Imagery HTB Writeup (Live Logging Style)
 
 So, I started by running nmap on the target to see what ports are open. Only port 22 and port 80  showed up. Which is what most of the times . A web app with some flaw and use it to get reverse shell . CLASSIC
 
@@ -828,3 +828,75 @@ tmpfs on /tmp type tmpfs (rw,nosuid,nodev,size=1979616k,nr_inodes=1048576,inode6
 ```
     
 
+# What Actually Happened
+- The attacker started with **reconnaissance** — using tools like `nmap` and `ffuf` to find **which ports** and **web endpoints** were open.  Think of this as shaking the building doors to see which one’s unlocked.
+    
+- They found a **Flask‑based web app** where users could report bugs and upload images. Hidden in that code was a small input sanitization issue that allowed the attacker to run **XSS (cross‑site scripting)**, which made the admin’s browser send back its **authentication cookie**.
+    
+- Once they had the admin cookie, they were inside the management zone of the app.  From there, they found a **server‑side weakness** in one API endpoint (`applyvisualtransform`) that used `subprocess.run(..., shell=True)`.  
+  
+- This allowed them to inject a **reverse shell** . Basically making the server open a secret connection back to the attacker’s machine.
+    
+- After entering as the `web` user, they found a binary (`charcol`) that was allowed to run as **root** without a password (`sudo NOPASSWD`).  
+  
+- By creating a fake cron job through this tool, they escalated privilege to **root**, gaining full system control.
+
+# SOC Detection In Simple Technical Terms
+
+| Attack Step                | What It Looks Like to a SOC                                                                                                             |
+| -------------------------- | --------------------------------------------------------------------------------------------------------------------------------------- |
+| **Recon** (`nmap`, `ffuf`) | Unusual spikes in port scans, 405/401 HTTP codes, repetitive requests from one IP                                                       |
+| **XSS Attack**             | Outbound traffic to attacker IPs carrying cookies or encoded strings (`document.cookie`)                                                |
+| **Command Injection**      | Web server (`python` or `gunicorn`) spawning unexpected child processes (bash, nc)                                                      |
+| **Reverse Shell**          | Network connection from internal host to an unknown external IP                                                                         |
+| **Privilege Escalation**   | Execution of `/usr/local/bin/charcol` or other binaries via sudo without prior authentication and creation of cron jobs in user context |
+| **Persistence**            | Repeated execution of custom cron or backup processes with altered arguments                                                            |
+
+# How To Prevent It
+
+1. **Web Layer Hardening**
+    
+    - Disable `shell=True` in Python’s `subprocess` calls.
+    - Sanitize all user input in the web app (especially `title`, `description`).
+    - Use **HttpOnly** and **SameSite** cookie flags to stop XSS cookie theft.
+        
+2. **System Layer Defense**
+    
+    - Remove unnecessary `NOPASSWD` sudo privileges.
+    - Mount `/tmp` as `noexec,nosuid,nodev` .
+    - Limit cron job creation to admin‑approved scripts only.
+        
+3. **Monitoring & Alerts**
+    
+    - Create rules in Suricata/SIEM for patterns like:
+        
+        - High volume of web requests with many 405 responses.
+        - Python processes spawning bash or netcat.
+        - File creation events with SUID bit set on non‑standard locations.
+            
+4. **Credential & Config Protection**
+    
+    - Keep `SECRET_KEY` and backup passwords outside the app repo (in environment variables or vaults).
+    - Regularly rotate keys and disable default dev tokens like `default-secret-token-for-dev`.
+
+
+# Incident Response (IR) Flow . Easy Technical Summary
+
+1. **Preparation:**  
+    Logs, alerts, and playbooks must already exist. Collect system logs (`/var/log/auth.log`, `auditd`, and web access logs`).
+    
+2. **Detection:**  
+    Receive alerts from WAF or EDR . Example , “python spawning bash” or outbound `nc` session.
+    
+3. **Containment:**  
+    Block attacker IP, revoke admin cookies, remove `/tmp` reverse shell binaries.
+    
+4. **Eradication:**  
+    Patch Flask code, fix subprocess misuses, remove `NOPASSWD` rules.
+    
+5. **Recovery:**  
+    Restore healthy web instances from a clean backup, re‑deploy under container isolation with `AppArmor`/`SELinux`.
+    
+6. **Lessons Learned:**
+    - Always assume attackers will chain small flaws (XSS → cookie reuse → command inject → sudo abuse).
+    - Monitor cross‑layer events. Web and system telemetry together tell the real story.
